@@ -891,6 +891,11 @@ let currentIntentFilter = 'all';
 let selectedIntent = 'keepsake';
 let editingId = null;
 
+// ─── RENDER ───────────────────────────────────────────────────────────────
+const TYPE_ICONS = { book:'📚', vinyl:'💿', cd:'💽', dvd:'🎬', game:'🎮', magazine:'📰', other:'📦' };
+const TYPE_LABELS = { book:'Book', vinyl:'Vinyl', cd:'CD', dvd:'DVD', game:'Game', magazine:'Mag', other:'Other' };
+const CREATOR_LABELS = { book:'Author', vinyl:'Artist', cd:'Artist', dvd:'Director', game:'Publisher', magazine:'Issue', other:'Creator' };
+
 // ─── INIT ─────────────────────────────────────────────────────────────────
 renderCollection();
 
@@ -908,11 +913,6 @@ function setIntentFilter(intent) {
   event.target.classList.add('active');
   renderCollection();
 }
-
-// ─── RENDER ───────────────────────────────────────────────────────────────
-const TYPE_ICONS = { book:'📚', vinyl:'💿', cd:'💽', dvd:'🎬', game:'🎮', magazine:'📰', other:'📦' };
-const TYPE_LABELS = { book:'Book', vinyl:'Vinyl', cd:'CD', dvd:'DVD', game:'Game', magazine:'Mag', other:'Other' };
-const CREATOR_LABELS = { book:'Author', vinyl:'Artist', cd:'Artist', dvd:'Director', game:'Publisher', magazine:'Issue', other:'Creator' };
 
 function getIntentClass(intent) {
   return 'intent-' + (intent || 'keepsake').toLowerCase().replace(/\s+/g,'-');
