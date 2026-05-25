@@ -95,6 +95,57 @@
     letter-spacing: 0.05em;
   }
 
+  .header-actions { display: flex; align-items: center; gap: 6px; }
+
+  .action-btn {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .action-btn:hover { color: var(--text); border-color: var(--border-light); }
+
+  .export-wrap { position: relative; }
+  .export-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    z-index: 200;
+    min-width: 110px;
+  }
+  .export-menu.open { display: block; }
+  .export-menu button {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s;
+  }
+  .export-menu button:last-child { border-bottom: none; }
+  .export-menu button:hover { background: var(--bg3); }
+
   /* TABS */
   .tabs {
     display: flex;
@@ -743,7 +794,17 @@
 <header class="header">
   <div class="header-top">
     <div class="logo">Steward<span>Keep</span></div>
-    <div class="item-count" id="item-count">0 items</div>
+    <div class="header-actions">
+      <div class="item-count" id="item-count">0 items</div>
+      <div class="export-wrap">
+        <button class="action-btn" onclick="toggleExportMenu(event)">Export ↓</button>
+        <div class="export-menu" id="export-menu">
+          <button onclick="exportJSON();closeExportMenu()">JSON</button>
+          <button onclick="exportCSV();closeExportMenu()">CSV</button>
+        </div>
+      </div>
+      <button class="action-btn" onclick="triggerImport()">Import ↑</button>
+    </div>
   </div>
   <div class="tabs">
     <button class="tab active" onclick="setTypeFilter('all')">All</button>
@@ -776,6 +837,8 @@
 <button class="fab" onclick="openAddModal()">＋</button>
 
 <!-- ADD MODAL -->
+<input type="file" id="import-input" accept=".json,.csv" style="display:none" onchange="handleImport(event)">
+
 <div class="modal-overlay" id="add-modal">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -1387,6 +1450,106 @@ if (collection.length === 0) {
   ];
   localStorage.setItem('stewardkeep_collection', JSON.stringify(collection));
   renderCollection();
+}
+
+// ─── EXPORT / IMPORT ─────────────────────────────────────────────────────
+function toggleExportMenu(e) {
+  e.stopPropagation();
+  document.getElementById('export-menu').classList.toggle('open');
+}
+function closeExportMenu() {
+  document.getElementById('export-menu').classList.remove('open');
+}
+document.addEventListener('click', closeExportMenu);
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(collection, null, 2)], {type: 'application/json'});
+  triggerDownload(blob, 'stewardkeep-' + isoDate() + '.json');
+}
+
+function exportCSV() {
+  const cols = ['id','type','title','creator','genre','year','location','intent','notes','isbn','coverUrl','addedAt'];
+  const rows = collection.map(item => cols.map(c => csvCell(item[c] ?? '')).join(','));
+  const blob = new Blob([[cols.join(','), ...rows].join('\n')], {type: 'text/csv'});
+  triggerDownload(blob, 'stewardkeep-' + isoDate() + '.csv');
+}
+
+function triggerDownload(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function csvCell(v) {
+  const s = String(v);
+  return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function isoDate() { return new Date().toISOString().slice(0, 10); }
+
+function triggerImport() { document.getElementById('import-input').click(); }
+
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const text = ev.target.result.trim();
+      let imported = file.name.endsWith('.csv') ? parseCSVImport(text) : JSON.parse(text);
+      if (!Array.isArray(imported)) imported = [imported];
+      if (!imported.length) { alert('No items found in file.'); return; }
+      const doReplace = confirm(
+        'Import ' + imported.length + ' item' + (imported.length !== 1 ? 's' : '') + '?\n\nOK = replace your collection\nCancel = merge (add new items only)'
+      );
+      if (doReplace) {
+        collection = imported;
+      } else {
+        const existing = new Set(collection.map(i => i.id));
+        const added = imported.filter(i => !existing.has(i.id));
+        collection = [...collection, ...added];
+        alert('Added ' + added.length + ' new item' + (added.length !== 1 ? 's' : '') + '.');
+      }
+      localStorage.setItem('stewardkeep_collection', JSON.stringify(collection));
+      renderCollection();
+    } catch(err) { alert('Could not read file: ' + err.message); }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function parseCSVImport(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVRow(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = parseCSVRow(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
+    if (!obj.id) obj.id = 'imp-' + Math.random().toString(36).slice(2, 9);
+    obj.addedAt = Number(obj.addedAt) || Date.now();
+    return obj;
+  });
+}
+
+function parseCSVRow(line) {
+  const cells = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQ) {
+      if (ch === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') { inQ = false; }
+      else { cur += ch; }
+    } else {
+      if (ch === '"') { inQ = true; }
+      else if (ch === ',') { cells.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+  }
+  cells.push(cur);
+  return cells;
 }
 
 if ('serviceWorker' in navigator) {
