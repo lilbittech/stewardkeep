@@ -1,4 +1,4 @@
-const CACHE = 'stewardkeep-v1';
+const CACHE = 'stewardkeep-v2';
 const ASSETS = [
   './',
   './index.html',
