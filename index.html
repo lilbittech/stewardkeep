@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>StewardKeep — Media Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8922a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StewardKeep">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0f0e0b;
+    --bg2: #1a1813;
+    --bg3: #232018;
+    --card: #1e1c17;
+    --card-hover: #272420;
+    --border: #3a3529;
+    --border-light: #4a4438;
+    --cream: #e8dfc8;
+    --amber: #c8922a;
+    --amber-light: #e0a83a;
+    --sage: #7a9e7e;
+    --rose: #b87070;
+    --blue: #6a8fa8;
+    --text: #d4c9b0;
+    --text-muted: #7a6f5a;
+    --text-dim: #4a4438;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-mono: 'DM Mono', monospace;
+    --font-sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRAIN OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* HEADER */
+  .header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .logo {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--cream);
+    letter-spacing: -0.5px;
+  }
+
+  .logo span {
+    color: var(--amber);
+    font-style: italic;
+  }
+
+  .item-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    margin-right: -1px;
+  }
+  .tab:first-child { border-radius: 4px 0 0 4px; }
+  .tab:last-child { border-radius: 0 4px 4px 0; margin-right: 0; }
+  .tab.active {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--bg);
+    font-weight: 500;
+    z-index: 1;
+  }
+  .tab:hover:not(.active) {
+    color: var(--text);
+    border-color: var(--border-light);
+  }
+
+  /* MAIN CONTENT */
+  .main { padding: 0 16px 100px; }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 0;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .stats-bar::-webkit-scrollbar { display: none; }
+
+  .stat {
+    flex: 0 0 auto;
+    padding: 8px 16px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .stat:last-child { border-right: none; }
+  .stat-num {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--cream);
+    display: block;
+  }
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* FILTER ROW */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    align-items: center;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+
+  .search-box {
+    flex: 1;
+    min-width: 120px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    outline: none;
+  }
+  .search-box::placeholder { color: var(--text-dim); }
+  .search-box:focus { border-color: var(--border-light); }
+
+  .filter-chip {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .filter-chip.active {
+    border-color: var(--amber);
+    color: var(--amber);
+    background: rgba(200, 146, 42, 0.08);
+  }
+
+  /* COLLECTION GRID */
+  .collection {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-top: 4px;
+  }
+
+  .item-card {
+    background: var(--card);
+    border-radius: 8px;
+    padding: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    animation: slideIn 0.2s ease;
+  }
+  .item-card:hover { background: var(--card-hover); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .item-thumb {
+    width: 44px;
+    height: 60px;
+    border-radius: 3px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    overflow: hidden;
+  }
+  .item-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 3px;
+  }
+
+  .item-vinyl .item-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, #2a2520 0%, #1a1712 30%, #2a2520 50%, #1a1712 70%, #2a2520 100%);
+    position: relative;
+  }
+  .item-vinyl .item-thumb::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--bg3);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .item-info { flex: 1; min-width: 0; }
+
+  .item-title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--cream);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+
+  .item-creator {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-style: italic;
+    font-family: var(--font-display);
+  }
+
+  .item-meta {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .badge {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 3px;
+    font-weight: 400;
+  }
+
+  .badge-type { background: var(--bg3); color: var(--text-muted); }
+  .badge-genre { background: rgba(106, 143, 168, 0.15); color: var(--blue); border: 1px solid rgba(106, 143, 168, 0.25); }
+
+  .badge-intent {
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+  }
+  .intent-keepsake { background: rgba(122, 158, 126, 0.15); color: var(--sage); border: 1px solid rgba(122, 158, 126, 0.25); }
+  .intent-donate   { background: rgba(200, 146, 42, 0.12); color: var(--amber); border: 1px solid rgba(200, 146, 42, 0.25); }
+  .intent-sell     { background: rgba(184, 112, 112, 0.15); color: var(--rose); border: 1px solid rgba(184, 112, 112, 0.25); }
+  .intent-giveaway { background: rgba(200, 146, 42, 0.08); color: var(--amber-light); border: 1px solid rgba(200, 146, 42, 0.2); }
+  .intent-to-read  { background: rgba(106, 143, 168, 0.12); color: var(--blue); border: 1px solid rgba(106, 143, 168, 0.25); }
+  .intent-reading  { background: rgba(122, 158, 126, 0.2); color: var(--sage); border: 1px solid rgba(122, 158, 126, 0.3); }
+  .intent-reference { background: rgba(74, 68, 56, 0.5); color: var(--text-muted); border: 1px solid var(--border); }
+  .intent-listened  { background: rgba(122, 158, 126, 0.15); color: var(--sage); border: 1px solid rgba(122, 158, 126, 0.25); }
+  .intent-watching  { background: rgba(106, 143, 168, 0.15); color: var(--blue); border: 1px solid rgba(106, 143, 168, 0.25); }
+  .intent-watched   { background: rgba(74, 68, 56, 0.5); color: var(--text-muted); border: 1px solid var(--border); }
+
+  .item-location {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .item-location::before { content: '📍'; font-size: 9px; }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--amber);
+    color: var(--bg);
+    border: none;
+    font-size: 26px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(200, 146, 42, 0.4);
+    z-index: 200;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 28px rgba(200, 146, 42, 0.5);
+  }
+
+  /* MODAL OVERLAY */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 9, 7, 0.85);
+    z-index: 300;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--bg2);
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 20px 20px 40px;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border-top: 1px solid var(--border);
+  }
+  .modal-overlay.open .modal {
+    transform: translateY(0);
+  }
+
+  .modal-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 20px;
+  }
+  .modal-title span { color: var(--amber); font-style: italic; }
+
+  /* SCAN AREA */
+  .scan-area {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+    background: var(--bg3);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .scan-area:hover { border-color: var(--amber); }
+  .scan-area.scanning { border-color: var(--amber); background: rgba(200, 146, 42, 0.05); }
+  .scan-icon { font-size: 36px; margin-bottom: 8px; }
+  .scan-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .scan-sublabel {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  #barcode-input {
+    display: none;
+  }
+
+  /* FORM */
+  .form-section-title {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 20px 0 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .form-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .form-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .form-input, .form-select, .form-textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--amber);
+  }
+  .form-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a6f5a'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
+  .form-textarea { resize: vertical; min-height: 70px; }
+
+  /* INTENT PICKER */
+  .intent-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .intent-btn {
+    padding: 10px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .intent-btn .intent-emoji { font-size: 16px; display: block; margin-bottom: 4px; }
+  .intent-btn.selected { border-color: var(--amber); color: var(--amber); background: rgba(200, 146, 42, 0.1); }
+
+  /* FETCHED PREVIEW */
+  .fetch-preview {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .fetch-preview img {
+    width: 50px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 3px;
+  }
+  .fetch-preview-info { flex: 1; }
+  .fetch-preview-title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--cream);
+  }
+  .fetch-preview-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .fetch-status {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--sage);
+    margin-top: 6px;
+  }
+
+  /* SAVE BTN */
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    background: var(--amber);
+    color: var(--bg);
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-weight: 500;
+    margin-top: 16px;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-primary:hover { background: var(--amber-light); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* DETAIL MODAL */
+  .detail-cover {
+    width: 80px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .detail-cover-vinyl {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, #2a2520 0%, #1a1712 30%, #2a2520 50%, #1a1712 70%, #2a2520 100%);
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .detail-cover-vinyl::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bg3);
+    position: absolute;
+  }
+  .detail-header { display: flex; gap: 16px; margin-bottom: 20px; }
+  .detail-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1.2;
+  }
+  .detail-creator {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-size: 14px;
+  }
+  .detail-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+  .detail-field {
+    margin-bottom: 14px;
+  }
+  .detail-field-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .detail-field-value {
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .btn-danger {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--rose);
+    border: 1px solid rgba(184, 112, 112, 0.3);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* LOADING */
+  .loading-dot {
+    display: inline-block;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse {
+    0%, 60%, 100% { opacity: 0.3; }
+    30% { opacity: 1; }
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--cream);
+    margin-bottom: 8px;
+  }
+  .empty-sub { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+  /* TYPE ICONS */
+  .type-icon { font-size: 18px; }
+
+  /* MANUAL ISBN INPUT */
+  .isbn-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .isbn-row .form-input { flex: 1; }
+  .isbn-row button {
+    padding: 10px 14px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .isbn-row button:hover { border-color: var(--amber); color: var(--amber); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .divider { height: 1px; background: var(--border); margin: 8px 0; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-top">
+    <div class="logo">Steward<span>Keep</span></div>
+    <div class="item-count" id="item-count">0 items</div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="setTypeFilter('all')">All</button>
+    <button class="tab" onclick="setTypeFilter('book')">Books</button>
+    <button class="tab" onclick="setTypeFilter('vinyl')">Vinyl</button>
+    <button class="tab" onclick="setTypeFilter('cd')">CDs</button>
+    <button class="tab" onclick="setTypeFilter('dvd')">DVD/Film</button>
+    <button class="tab" onclick="setTypeFilter('game')">Games</button>
+    <button class="tab" onclick="setTypeFilter('other')">Other</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <div class="filter-row">
+    <input class="search-box" type="search" placeholder="Search titles, creators…" id="search-input" oninput="renderCollection()">
+    <button class="filter-chip" id="filter-all" onclick="setIntentFilter('all')">All</button>
+    <button class="filter-chip" onclick="setIntentFilter('keepsake')">Keepsake</button>
+    <button class="filter-chip" onclick="setIntentFilter('sell')">Sell</button>
+    <button class="filter-chip" onclick="setIntentFilter('donate')">Donate</button>
+    <button class="filter-chip" onclick="setIntentFilter('giveaway')">Give Away</button>
+    <button class="filter-chip" onclick="setIntentFilter('to-read')">To Read</button>
+    <button class="filter-chip" onclick="setIntentFilter('reading')">Reading</button>
+  </div>
+
+  <div class="collection" id="collection"></div>
+</div>
+
+<button class="fab" onclick="openAddModal()">＋</button>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add to <span>StewardKeep</span></div>
+
+    <!-- Scan / Manual lookup -->
+    <div id="scan-section">
+      <div class="scan-area" id="scan-area" onclick="triggerScan()">
+        <div class="scan-icon">📷</div>
+        <div class="scan-label">Scan Barcode</div>
+        <div class="scan-sublabel">Tap to use camera (ISBN, UPC)</div>
+      </div>
+      <input type="file" id="barcode-input" accept="image/*" capture="environment" onchange="handleBarcodeImage(event)">
+
+      <div class="isbn-row">
+        <input class="form-input" type="text" id="manual-isbn" placeholder="Enter ISBN / barcode manually…" inputmode="numeric">
+        <button onclick="lookupManual()">Look up</button>
+      </div>
+
+      <div id="fetch-preview-area" style="display:none"></div>
+    </div>
+
+    <!-- FORM FIELDS -->
+    <div class="form-section-title">Item Details</div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Type</label>
+        <select class="form-select" id="f-type" onchange="updateIntentOptions()">
+          <option value="book">📚 Book</option>
+          <option value="vinyl">💿 Vinyl</option>
+          <option value="cd">💽 CD</option>
+          <option value="dvd">🎬 DVD / Film</option>
+          <option value="game">🎮 Game</option>
+          <option value="magazine">📰 Magazine</option>
+          <option value="other">📦 Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-field" style="margin-bottom:12px">
+      <label class="form-label">Title</label>
+      <input class="form-input" type="text" id="f-title" placeholder="Title…">
+    </div>
+
+    <div class="form-field" style="margin-bottom:12px">
+      <label class="form-label" id="creator-label">Author</label>
+      <input class="form-input" type="text" id="f-creator" placeholder="Author, artist, director…">
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Genre</label>
+        <input class="form-input" type="text" id="f-genre" placeholder="Fiction, Jazz, Horror…">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Year</label>
+        <input class="form-input" type="text" id="f-year" placeholder="Year" inputmode="numeric" style="max-width:90px">
+      </div>
+    </div>
+
+    <div class="form-field" style="margin-bottom:12px">
+      <label class="form-label">Where is it stored?</label>
+      <input class="form-input" type="text" id="f-location" placeholder="Living room shelf, Box #3, Storage unit…">
+    </div>
+
+    <div class="form-section-title">Intention</div>
+
+    <div class="intent-grid" id="intent-grid">
+      <button class="intent-btn selected" data-intent="keepsake" onclick="selectIntent('keepsake')">
+        <span class="intent-emoji">🏛️</span>keepsake
+      </button>
+      <button class="intent-btn" data-intent="to-read" onclick="selectIntent('to-read')">
+        <span class="intent-emoji">🔖</span>to read
+      </button>
+      <button class="intent-btn" data-intent="reading" onclick="selectIntent('reading')">
+        <span class="intent-emoji">📖</span>reading
+      </button>
+      <button class="intent-btn" data-intent="reference" onclick="selectIntent('reference')">
+        <span class="intent-emoji">📐</span>reference
+      </button>
+      <button class="intent-btn" data-intent="donate" onclick="selectIntent('donate')">
+        <span class="intent-emoji">🤝</span>donate
+      </button>
+      <button class="intent-btn" data-intent="giveaway" onclick="selectIntent('giveaway')">
+        <span class="intent-emoji">🎁</span>give away
+      </button>
+      <button class="intent-btn" data-intent="sell" onclick="selectIntent('sell')">
+        <span class="intent-emoji">🏷️</span>sell
+      </button>
+    </div>
+
+    <div class="form-field" style="margin-bottom:12px">
+      <label class="form-label">Notes</label>
+      <textarea class="form-textarea" id="f-notes" placeholder="Condition, edition, memories, price target…"></textarea>
+    </div>
+
+    <button class="btn-primary" onclick="saveItem()">Add to Collection</button>
+    <button class="btn-secondary" onclick="closeAddModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" id="detail-modal-content"></div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────
+let collection = JSON.parse(localStorage.getItem('stewardkeep_collection') || '[]');
+let currentTypeFilter = 'all';
+let currentIntentFilter = 'all';
+let selectedIntent = 'keepsake';
+let editingId = null;
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+renderCollection();
+
+// ─── FILTER ───────────────────────────────────────────────────────────────
+function setTypeFilter(type) {
+  currentTypeFilter = type;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  renderCollection();
+}
+
+function setIntentFilter(intent) {
+  currentIntentFilter = intent;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  renderCollection();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────
+const TYPE_ICONS = { book:'📚', vinyl:'💿', cd:'💽', dvd:'🎬', game:'🎮', magazine:'📰', other:'📦' };
+const TYPE_LABELS = { book:'Book', vinyl:'Vinyl', cd:'CD', dvd:'DVD', game:'Game', magazine:'Mag', other:'Other' };
+const CREATOR_LABELS = { book:'Author', vinyl:'Artist', cd:'Artist', dvd:'Director', game:'Publisher', magazine:'Issue', other:'Creator' };
+
+function getIntentClass(intent) {
+  return 'intent-' + (intent || 'keepsake').toLowerCase().replace(/\s+/g,'-');
+}
+
+function renderCollection() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  let items = collection.filter(item => {
+    if (currentTypeFilter !== 'all' && item.type !== currentTypeFilter) return false;
+    if (currentIntentFilter !== 'all' && item.intent !== currentIntentFilter) return false;
+    if (q) {
+      const haystack = (item.title + item.creator + item.genre + item.location).toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const el = document.getElementById('collection');
+  document.getElementById('item-count').textContent = collection.length + ' item' + (collection.length !== 1 ? 's' : '');
+
+  // Stats
+  renderStats();
+
+  if (items.length === 0) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">${collection.length === 0 ? '📚' : '🔍'}</div>
+      <div class="empty-title">${collection.length === 0 ? 'Your keep awaits' : 'Nothing matches'}</div>
+      <div class="empty-sub">${collection.length === 0 ? 'Tap + to add your first item.<br>Scan a barcode or enter details manually.' : 'Try a different search or filter.'}</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = items.map(item => {
+    const thumbHtml = item.coverUrl
+      ? `<div class="item-thumb"><img src="${item.coverUrl}" onerror="this.parentElement.innerHTML='${TYPE_ICONS[item.type]||'📦'}'"></div>`
+      : `<div class="item-thumb ${item.type === 'vinyl' ? 'item-vinyl' : ''}">${item.type === 'vinyl' ? '' : (TYPE_ICONS[item.type]||'📦')}</div>`;
+
+    return `<div class="item-card ${item.type === 'vinyl' ? 'item-vinyl' : ''}" onclick="openDetail('${item.id}')">
+      ${thumbHtml}
+      <div class="item-info">
+        <div class="item-title">${escHtml(item.title)}</div>
+        ${item.creator ? `<div class="item-creator">${escHtml(item.creator)}</div>` : ''}
+        <div class="item-meta">
+          <span class="badge badge-type">${TYPE_LABELS[item.type]||'Other'}</span>
+          ${item.genre ? `<span class="badge badge-genre">${escHtml(item.genre)}</span>` : ''}
+          ${item.intent ? `<span class="badge badge-intent ${getIntentClass(item.intent)}">${escHtml(item.intent)}</span>` : ''}
+        </div>
+        ${item.location ? `<div class="item-location">${escHtml(item.location)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStats() {
+  const counts = {};
+  collection.forEach(i => { counts[i.intent] = (counts[i.intent]||0)+1; });
+  const toAction = (counts['sell']||0) + (counts['donate']||0) + (counts['giveaway']||0);
+  const reading = (counts['reading']||0) + (counts['to-read']||0);
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat"><span class="stat-num">${collection.length}</span><span class="stat-label">Total</span></div>
+    <div class="stat"><span class="stat-num">${counts['keepsake']||0}</span><span class="stat-label">Keepsakes</span></div>
+    <div class="stat"><span class="stat-num">${reading}</span><span class="stat-label">Reading Queue</span></div>
+    <div class="stat"><span class="stat-num">${toAction}</span><span class="stat-label">To Action</span></div>
+    <div class="stat"><span class="stat-num">${counts['sell']||0}</span><span class="stat-label">For Sale</span></div>
+  `;
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────
+function openAddModal() {
+  editingId = null;
+  clearForm();
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+  document.getElementById('fetch-preview-area').style.display = 'none';
+  document.getElementById('fetch-preview-area').innerHTML = '';
+  clearForm();
+}
+
+function clearForm() {
+  ['f-title','f-creator','f-genre','f-year','f-location','f-notes','manual-isbn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-type').value = 'book';
+  selectIntent('keepsake');
+  pendingCoverUrl = null;
+  pendingIsbn = null;
+  updateIntentOptions();
+}
+
+// ─── INTENT ───────────────────────────────────────────────────────────────
+let intentOptions = {
+  book: [
+    {id:'keepsake',emoji:'🏛️',label:'keepsake'},
+    {id:'to-read',emoji:'🔖',label:'to read'},
+    {id:'reading',emoji:'📖',label:'reading'},
+    {id:'reference',emoji:'📐',label:'reference'},
+    {id:'donate',emoji:'🤝',label:'donate'},
+    {id:'giveaway',emoji:'🎁',label:'give away'},
+    {id:'sell',emoji:'🏷️',label:'sell'},
+  ],
+  vinyl: [
+    {id:'keepsake',emoji:'🏛️',label:'keepsake'},
+    {id:'listened',emoji:'🎵',label:'listened'},
+    {id:'reference',emoji:'📐',label:'reference'},
+    {id:'donate',emoji:'🤝',label:'donate'},
+    {id:'giveaway',emoji:'🎁',label:'give away'},
+    {id:'sell',emoji:'🏷️',label:'sell'},
+  ],
+  cd: [
+    {id:'keepsake',emoji:'🏛️',label:'keepsake'},
+    {id:'listened',emoji:'🎵',label:'listened'},
+    {id:'donate',emoji:'🤝',label:'donate'},
+    {id:'giveaway',emoji:'🎁',label:'give away'},
+    {id:'sell',emoji:'🏷️',label:'sell'},
+  ],
+  dvd: [
+    {id:'keepsake',emoji:'🏛️',label:'keepsake'},
+    {id:'watching',emoji:'🍿',label:'to watch'},
+    {id:'watched',emoji:'✅',label:'watched'},
+    {id:'donate',emoji:'🤝',label:'donate'},
+    {id:'giveaway',emoji:'🎁',label:'give away'},
+    {id:'sell',emoji:'🏷️',label:'sell'},
+  ],
+};
+
+function updateIntentOptions() {
+  const type = document.getElementById('f-type').value;
+  const label = CREATOR_LABELS[type] || 'Creator';
+  document.getElementById('creator-label').textContent = label;
+
+  const opts = intentOptions[type] || intentOptions.book;
+  const grid = document.getElementById('intent-grid');
+  grid.innerHTML = opts.map(o => `
+    <button class="intent-btn ${selectedIntent === o.id ? 'selected' : ''}" data-intent="${o.id}" onclick="selectIntent('${o.id}')">
+      <span class="intent-emoji">${o.emoji}</span>${o.label}
+    </button>
+  `).join('');
+
+  // if current selection not in new opts, default to keepsake
+  if (!opts.find(o => o.id === selectedIntent)) selectIntent('keepsake');
+}
+
+function selectIntent(intent) {
+  selectedIntent = intent;
+  document.querySelectorAll('.intent-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.intent === intent);
+  });
+}
+
+// ─── BARCODE SCAN ─────────────────────────────────────────────────────────
+let pendingCoverUrl = null;
+let pendingIsbn = null;
+
+function triggerScan() {
+  document.getElementById('barcode-input').click();
+}
+
+async function handleBarcodeImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const area = document.getElementById('scan-area');
+  area.classList.add('scanning');
+  area.querySelector('.scan-label').textContent = 'Decoding barcode…';
+  area.querySelector('.scan-sublabel').textContent = '';
+
+  // Use the Claude API to decode the barcode from the image
+  try {
+    const base64 = await fileToBase64(file);
+    const barcode = await decodeBarcodeWithClaude(base64, file.type);
+
+    if (barcode) {
+      area.querySelector('.scan-label').textContent = `Found: ${barcode}`;
+      area.querySelector('.scan-sublabel').textContent = 'Looking up metadata…';
+      document.getElementById('manual-isbn').value = barcode;
+      await lookupIsbn(barcode);
+    } else {
+      area.querySelector('.scan-label').textContent = 'No barcode found';
+      area.querySelector('.scan-sublabel').textContent = 'Try entering the ISBN manually below';
+    }
+  } catch(e) {
+    area.querySelector('.scan-label').textContent = 'Scan error — enter manually';
+    area.querySelector('.scan-sublabel').textContent = '';
+  }
+  area.classList.remove('scanning');
+  event.target.value = '';
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function decodeBarcodeWithClaude(base64, mimeType) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 100,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+          { type: 'text', text: 'Look at this image and find the barcode or ISBN number. Return ONLY the numeric barcode/ISBN digits, nothing else. If there is no barcode, return the single word: NONE' }
+        ]
+      }]
+    })
+  });
+  const data = await response.json();
+  const text = data.content?.[0]?.text?.trim() || '';
+  if (text === 'NONE' || text.length < 8) return null;
+  return text.replace(/[^0-9X]/gi, '');
+}
+
+function lookupManual() {
+  const isbn = document.getElementById('manual-isbn').value.trim().replace(/[^0-9X]/gi,'');
+  if (isbn.length < 8) return;
+  lookupIsbn(isbn);
+}
+
+async function lookupIsbn(isbn) {
+  const previewArea = document.getElementById('fetch-preview-area');
+  previewArea.style.display = 'block';
+  previewArea.innerHTML = `<div class="fetch-preview"><div style="color:var(--text-muted);font-family:var(--font-mono);font-size:11px">Looking up <b>${isbn}</b> <span class="loading-dot">·</span><span class="loading-dot">·</span><span class="loading-dot">·</span></div></div>`;
+
+  try {
+    // Try Open Library first
+    const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+    const olData = await olRes.json();
+    const key = `ISBN:${isbn}`;
+
+    if (olData[key]) {
+      const book = olData[key];
+      const title = book.title || '';
+      const authors = (book.authors||[]).map(a=>a.name).join(', ');
+      const coverUrl = book.cover?.medium || book.cover?.small || null;
+      const year = book.publish_date || '';
+      const genres = (book.subjects||[]).slice(0,3).map(s=>s.name||s).join(', ');
+      const publisher = (book.publishers||[]).map(p=>p.name).join(', ');
+
+      pendingCoverUrl = coverUrl;
+      pendingIsbn = isbn;
+
+      // Auto-fill
+      if (title) document.getElementById('f-title').value = title;
+      if (authors) document.getElementById('f-creator').value = authors;
+      if (genres) document.getElementById('f-genre').value = genres.split(',')[0].trim();
+      if (year) document.getElementById('f-year').value = year.match(/\d{4}/)?.[0] || year;
+
+      previewArea.innerHTML = `<div class="fetch-preview">
+        ${coverUrl ? `<img src="${coverUrl}" alt="cover">` : '<div style="width:50px;height:70px;background:var(--bg3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:24px">📚</div>'}
+        <div class="fetch-preview-info">
+          <div class="fetch-preview-title">${escHtml(title)}</div>
+          <div class="fetch-preview-sub">${escHtml(authors)}</div>
+          ${year ? `<div class="fetch-preview-sub">${escHtml(year)}</div>` : ''}
+          ${publisher ? `<div class="fetch-preview-sub" style="font-size:11px">${escHtml(publisher)}</div>` : ''}
+          <div class="fetch-status">✓ Found via Open Library</div>
+        </div>
+      </div>`;
+      return;
+    }
+
+    // Fallback: Google Books
+    const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+    const gbData = await gbRes.json();
+
+    if (gbData.items?.length) {
+      const vol = gbData.items[0].volumeInfo;
+      const title = vol.title || '';
+      const authors = (vol.authors||[]).join(', ');
+      const coverUrl = vol.imageLinks?.thumbnail?.replace('http://','https://') || null;
+      const year = vol.publishedDate || '';
+      const cats = (vol.categories||[]).join(', ');
+
+      pendingCoverUrl = coverUrl;
+      pendingIsbn = isbn;
+
+      if (title) document.getElementById('f-title').value = title;
+      if (authors) document.getElementById('f-creator').value = authors;
+      if (cats) document.getElementById('f-genre').value = cats.split('/')[0].trim();
+      if (year) document.getElementById('f-year').value = year.substring(0,4);
+
+      previewArea.innerHTML = `<div class="fetch-preview">
+        ${coverUrl ? `<img src="${coverUrl}" alt="cover">` : '<div style="width:50px;height:70px;background:var(--bg3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:24px">📚</div>'}
+        <div class="fetch-preview-info">
+          <div class="fetch-preview-title">${escHtml(title)}</div>
+          <div class="fetch-preview-sub">${escHtml(authors)}</div>
+          ${year ? `<div class="fetch-preview-sub">${escHtml(year)}</div>` : ''}
+          <div class="fetch-status">✓ Found via Google Books</div>
+        </div>
+      </div>`;
+      return;
+    }
+
+    // Not found — try UPC for music/dvd
+    const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${isbn}`);
+    const upcData = await upcRes.json();
+    if (upcData.items?.length) {
+      const upc = upcData.items[0];
+      if (upc.title) document.getElementById('f-title').value = upc.title;
+      if (upc.brand) document.getElementById('f-creator').value = upc.brand;
+      pendingCoverUrl = upc.images?.[0] || null;
+      previewArea.innerHTML = `<div class="fetch-preview">
+        <div class="fetch-preview-info">
+          <div class="fetch-preview-title">${escHtml(upc.title||isbn)}</div>
+          <div class="fetch-preview-sub">${escHtml(upc.brand||'')}</div>
+          <div class="fetch-status">✓ Found via UPC database</div>
+        </div>
+      </div>`;
+      return;
+    }
+
+    previewArea.innerHTML = `<div class="fetch-preview"><div class="fetch-preview-info"><div class="fetch-preview-title" style="color:var(--text-muted)">Not found in databases</div><div class="fetch-preview-sub">Enter details manually below</div></div></div>`;
+
+  } catch(e) {
+    previewArea.innerHTML = `<div class="fetch-preview"><div class="fetch-preview-info"><div class="fetch-preview-title" style="color:var(--text-muted)">Lookup failed</div><div class="fetch-preview-sub">Enter details manually</div></div></div>`;
+  }
+}
+
+// ─── SAVE ─────────────────────────────────────────────────────────────────
+function saveItem() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { document.getElementById('f-title').focus(); return; }
+
+  const item = {
+    id: editingId || Date.now().toString(36) + Math.random().toString(36).slice(2),
+    type: document.getElementById('f-type').value,
+    title,
+    creator: document.getElementById('f-creator').value.trim(),
+    genre: document.getElementById('f-genre').value.trim(),
+    year: document.getElementById('f-year').value.trim(),
+    location: document.getElementById('f-location').value.trim(),
+    intent: selectedIntent,
+    notes: document.getElementById('f-notes').value.trim(),
+    coverUrl: pendingCoverUrl || null,
+    isbn: pendingIsbn || document.getElementById('manual-isbn').value.trim() || null,
+    addedAt: editingId ? (collection.find(i=>i.id===editingId)?.addedAt || Date.now()) : Date.now(),
+  };
+
+  if (editingId) {
+    const idx = collection.findIndex(i => i.id === editingId);
+    if (idx !== -1) collection[idx] = item;
+  } else {
+    collection.unshift(item);
+  }
+
+  localStorage.setItem('stewardkeep_collection', JSON.stringify(collection));
+  closeAddModal();
+  closeDetailModal();
+  renderCollection();
+}
+
+// ─── DETAIL ───────────────────────────────────────────────────────────────
+function openDetail(id) {
+  const item = collection.find(i => i.id === id);
+  if (!item) return;
+
+  const coverHtml = item.coverUrl
+    ? `<img class="detail-cover" src="${item.coverUrl}" onerror="this.outerHTML='<div class=detail-cover-vinyl></div>'">`
+    : (item.type === 'vinyl'
+        ? `<div class="detail-cover-vinyl"></div>`
+        : `<div class="detail-cover" style="display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:4px;font-size:36px">${TYPE_ICONS[item.type]||'📦'}</div>`);
+
+  const modal = document.getElementById('detail-modal-content');
+  modal.innerHTML = `
+    <div class="modal-handle"></div>
+    <div class="detail-header">
+      ${coverHtml}
+      <div style="flex:1;min-width:0">
+        <div class="detail-title">${escHtml(item.title)}</div>
+        ${item.creator ? `<div class="detail-creator">${escHtml(item.creator)}</div>` : ''}
+        <div class="detail-badges">
+          <span class="badge badge-type">${TYPE_LABELS[item.type]||'Other'}</span>
+          ${item.year ? `<span class="badge badge-type">${escHtml(item.year)}</span>` : ''}
+          ${item.genre ? `<span class="badge badge-genre">${escHtml(item.genre)}</span>` : ''}
+          ${item.intent ? `<span class="badge badge-intent ${getIntentClass(item.intent)}">${escHtml(item.intent)}</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    ${item.location ? `<div class="detail-field"><div class="detail-field-label">Stored at</div><div class="detail-field-value">📍 ${escHtml(item.location)}</div></div>` : ''}
+    ${item.isbn ? `<div class="detail-field"><div class="detail-field-label">ISBN / Barcode</div><div class="detail-field-value" style="font-family:var(--font-mono);font-size:13px">${escHtml(item.isbn)}</div></div>` : ''}
+    ${item.notes ? `<div class="detail-field"><div class="detail-field-label">Notes</div><div class="detail-field-value">${escHtml(item.notes)}</div></div>` : ''}
+    <div class="detail-field"><div class="detail-field-label">Added</div><div class="detail-field-value" style="font-size:12px;color:var(--text-muted)">${new Date(item.addedAt).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div></div>
+
+    <div class="divider"></div>
+    <button class="btn-primary" onclick="editItem('${item.id}')">Edit Item</button>
+    <button class="btn-secondary" onclick="closeDetailModal()">Close</button>
+    <button class="btn-danger" onclick="deleteItem('${item.id}')">Remove from Keep</button>
+  `;
+
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal').classList.remove('open');
+}
+
+function editItem(id) {
+  const item = collection.find(i => i.id === id);
+  if (!item) return;
+  closeDetailModal();
+
+  editingId = id;
+  pendingCoverUrl = item.coverUrl;
+  pendingIsbn = item.isbn;
+
+  document.getElementById('f-type').value = item.type;
+  updateIntentOptions();
+  document.getElementById('f-title').value = item.title;
+  document.getElementById('f-creator').value = item.creator || '';
+  document.getElementById('f-genre').value = item.genre || '';
+  document.getElementById('f-year').value = item.year || '';
+  document.getElementById('f-location').value = item.location || '';
+  document.getElementById('f-notes').value = item.notes || '';
+  if (item.isbn) document.getElementById('manual-isbn').value = item.isbn;
+  selectIntent(item.intent || 'keepsake');
+
+  if (item.coverUrl) {
+    const pa = document.getElementById('fetch-preview-area');
+    pa.style.display = 'block';
+    pa.innerHTML = `<div class="fetch-preview">
+      <img src="${item.coverUrl}" alt="cover" style="width:50px;height:70px;object-fit:cover;border-radius:3px">
+      <div class="fetch-preview-info"><div class="fetch-preview-title">${escHtml(item.title)}</div><div class="fetch-status">Existing cover</div></div>
+    </div>`;
+  }
+
+  document.querySelector('#add-modal .modal-title').innerHTML = 'Edit Item';
+  document.querySelector('#add-modal .btn-primary').textContent = 'Save Changes';
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function deleteItem(id) {
+  if (!confirm('Remove this item from your keep?')) return;
+  collection = collection.filter(i => i.id !== id);
+  localStorage.setItem('stewardkeep_collection', JSON.stringify(collection));
+  closeDetailModal();
+  renderCollection();
+}
+
+// Close modals on overlay click
+document.getElementById('add-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('add-modal')) closeAddModal();
+});
+document.getElementById('detail-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('detail-modal')) closeDetailModal();
+});
+
+// ─── UTILS ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Seed demo data if empty
+if (collection.length === 0) {
+  collection = [
+    { id:'demo1', type:'book', title:'Braiding Sweetgrass', creator:'Robin Wall Kimmerer', genre:'Nature / Science', year:'2013', location:'Living room shelf', intent:'keepsake', notes:'One of my favorites. Lend freely but always ask back.', coverUrl:'https://covers.openlibrary.org/b/id/10710954-M.jpg', isbn:'9781571313560', addedAt: Date.now()-86400000*3 },
+    { id:'demo2', type:'vinyl', title:'Blue', creator:'Joni Mitchell', genre:'Folk', year:'1971', location:'Record cabinet, A–M', intent:'keepsake', notes:'Original pressing. Handle with care.', coverUrl:null, isbn:null, addedAt: Date.now()-86400000*2 },
+    { id:'demo3', type:'book', title:'The Left Hand of Darkness', creator:'Ursula K. Le Guin', genre:'Science Fiction', year:'1969', location:'Box #2, storage', intent:'to-read', notes:'', coverUrl:'https://covers.openlibrary.org/b/id/8474026-M.jpg', isbn:null, addedAt: Date.now()-86400000 },
+    { id:'demo4', type:'book', title:'Crying in H Mart', creator:'Michelle Zauner', genre:'Memoir', year:'2021', location:'Bedside table', intent:'reading', notes:'', coverUrl:'https://covers.openlibrary.org/b/id/12547191-M.jpg', isbn:null, addedAt: Date.now() },
+    { id:'demo5', type:'dvd', title:'Spirited Away', creator:'Hayao Miyazaki', genre:'Animation', year:'2001', location:'DVD shelf', intent:'keepsake', notes:'', coverUrl:null, isbn:null, addedAt: Date.now()-86400000*5 },
+    { id:'demo6', type:'book', title:'Sapiens', creator:'Yuval Noah Harari', genre:'History', year:'2011', location:'Office shelf', intent:'sell', notes:'Good condition. $8.', coverUrl:'https://covers.openlibrary.org/b/id/8739161-M.jpg', isbn:null, addedAt: Date.now()-86400000*7 },
+  ];
+  localStorage.setItem('stewardkeep_collection', JSON.stringify(collection));
+  renderCollection();
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
