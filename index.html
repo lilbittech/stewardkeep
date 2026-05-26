@@ -605,7 +605,44 @@
   .form-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a6f5a'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
   .form-textarea { resize: vertical; min-height: 70px; }
 
-  /* INTENT PICKER */
+  /* TAG PICKER */
+  .tag-suggestion-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tag-suggestion-btn {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tag-suggestion-btn:hover { border-color: var(--border-light); color: var(--text); }
+  .tag-suggestion-btn.active { border-color: var(--amber); color: var(--amber); background: rgba(200,146,42,0.1); }
+  .tag-custom-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tag-custom-row .form-input { flex: 1; }
+  .tag-chips-row { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; }
+  .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    padding: 3px 8px 3px 10px;
+    border-radius: 3px;
+    background: rgba(200,146,42,0.1);
+    color: var(--amber);
+    border: 1px solid rgba(200,146,42,0.25);
+  }
+  .tag-chip-remove {
+    background: none; border: none; color: var(--amber);
+    cursor: pointer; padding: 0; font-size: 13px; line-height: 1; opacity: 0.6;
+  }
+  .tag-chip-remove:hover { opacity: 1; }
+
+  /* (legacy, kept for intent-grid scroll behaviour) */
   .intent-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -864,15 +901,8 @@
 <div class="main">
   <div class="stats-bar" id="stats-bar"></div>
 
-  <div class="filter-row">
+  <div class="filter-row" id="filter-row">
     <input class="search-box" type="search" placeholder="Search titles, creators…" id="search-input" oninput="renderCollection()">
-    <button class="filter-chip" id="filter-all" onclick="setIntentFilter('all')">All</button>
-    <button class="filter-chip" onclick="setIntentFilter('keepsake')">Keepsake</button>
-    <button class="filter-chip" onclick="setIntentFilter('sell')">Sell</button>
-    <button class="filter-chip" onclick="setIntentFilter('donate')">Donate</button>
-    <button class="filter-chip" onclick="setIntentFilter('giveaway')">Give Away</button>
-    <button class="filter-chip" onclick="setIntentFilter('to-read')">To Read</button>
-    <button class="filter-chip" onclick="setIntentFilter('reading')">Reading</button>
   </div>
 
   <div class="collection" id="collection"></div>
@@ -915,7 +945,7 @@
     <div class="form-row">
       <div class="form-field">
         <label class="form-label">Type</label>
-        <select class="form-select" id="f-type" onchange="updateIntentOptions()">
+        <select class="form-select" id="f-type" onchange="onTypeChange()">
           <option value="book">📚 Book</option>
           <option value="vinyl">💿 Vinyl</option>
           <option value="cd">💽 CD</option>
@@ -953,31 +983,23 @@
       <input class="form-input" type="text" id="f-location" placeholder="Living room shelf, Box #3, Storage unit…">
     </div>
 
-    <div class="form-section-title">Intention</div>
-
-    <div class="intent-grid" id="intent-grid">
-      <button class="intent-btn selected" data-intent="keepsake" onclick="selectIntent('keepsake')">
-        <span class="intent-emoji">🏛️</span>keepsake
-      </button>
-      <button class="intent-btn" data-intent="to-read" onclick="selectIntent('to-read')">
-        <span class="intent-emoji">🔖</span>to read
-      </button>
-      <button class="intent-btn" data-intent="reading" onclick="selectIntent('reading')">
-        <span class="intent-emoji">📖</span>reading
-      </button>
-      <button class="intent-btn" data-intent="reference" onclick="selectIntent('reference')">
-        <span class="intent-emoji">📐</span>reference
-      </button>
-      <button class="intent-btn" data-intent="donate" onclick="selectIntent('donate')">
-        <span class="intent-emoji">🤝</span>donate
-      </button>
-      <button class="intent-btn" data-intent="giveaway" onclick="selectIntent('giveaway')">
-        <span class="intent-emoji">🎁</span>give away
-      </button>
-      <button class="intent-btn" data-intent="sell" onclick="selectIntent('sell')">
-        <span class="intent-emoji">🏷️</span>sell
-      </button>
+    <div class="form-section-title">Tags</div>
+    <div class="tag-suggestion-row">
+      <button class="tag-suggestion-btn" data-tag="keepsake" onclick="toggleSuggestionTag('keepsake')">🏛️ keepsake</button>
+      <button class="tag-suggestion-btn" data-tag="to-read" onclick="toggleSuggestionTag('to-read')">🔖 to read</button>
+      <button class="tag-suggestion-btn" data-tag="reading" onclick="toggleSuggestionTag('reading')">📖 reading</button>
+      <button class="tag-suggestion-btn" data-tag="reference" onclick="toggleSuggestionTag('reference')">📐 reference</button>
+      <button class="tag-suggestion-btn" data-tag="donate" onclick="toggleSuggestionTag('donate')">🤝 donate</button>
+      <button class="tag-suggestion-btn" data-tag="giveaway" onclick="toggleSuggestionTag('giveaway')">🎁 give away</button>
+      <button class="tag-suggestion-btn" data-tag="sell" onclick="toggleSuggestionTag('sell')">🏷️ sell</button>
+      <button class="tag-suggestion-btn" data-tag="listened" onclick="toggleSuggestionTag('listened')">🎵 listened</button>
+      <button class="tag-suggestion-btn" data-tag="watched" onclick="toggleSuggestionTag('watched')">✅ watched</button>
     </div>
+    <div class="tag-custom-row">
+      <input class="form-input" type="text" id="tag-custom-input" placeholder="Custom tag (e.g. english, borrowed)…" onkeydown="if(event.key==='Enter'){event.preventDefault();addTagFromInput();}">
+      <button onclick="addTagFromInput()">Add</button>
+    </div>
+    <div class="tag-chips-row" id="tag-chips-row"></div>
 
     <div class="form-field" style="margin-bottom:12px">
       <label class="form-label">Notes</label>
@@ -998,8 +1020,8 @@
 // ─── STATE ───────────────────────────────────────────────────────────────
 let collection = JSON.parse(localStorage.getItem('stewardkeep_collection') || '[]');
 let currentTypeFilter = 'all';
-let currentIntentFilter = 'all';
-let selectedIntent = 'keepsake';
+let currentTagFilter = 'all';
+let selectedTags = [];
 let editingId = null;
 
 // ─── RENDER ───────────────────────────────────────────────────────────────
@@ -1008,6 +1030,7 @@ const TYPE_LABELS = { book:'Book', vinyl:'Vinyl', cd:'CD', dvd:'DVD', game:'Game
 const CREATOR_LABELS = { book:'Author', vinyl:'Artist', cd:'Artist', dvd:'Director', game:'Publisher', magazine:'Issue', other:'Creator' };
 
 // ─── INIT ─────────────────────────────────────────────────────────────────
+renderFilterChips();
 renderCollection();
 
 // ─── FILTER ───────────────────────────────────────────────────────────────
@@ -1018,22 +1041,39 @@ function setTypeFilter(type) {
   renderCollection();
 }
 
-function setIntentFilter(intent) {
-  currentIntentFilter = intent;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  event.target.classList.add('active');
+const PREDEFINED_TAGS = ['keepsake','to-read','reading','reference','sell','donate','giveaway','listened','watching','watched'];
+
+function setTagFilter(tag) {
+  currentTagFilter = tag;
+  renderFilterChips();
   renderCollection();
 }
 
-function getIntentClass(intent) {
-  return 'intent-' + (intent || 'keepsake').toLowerCase().replace(/\s+/g,'-');
+function renderFilterChips() {
+  const customTags = [...new Set(collection.flatMap(i => i.tags||[]).filter(t => !PREDEFINED_TAGS.includes(t)))].sort();
+  const allTags = ['keepsake','to-read','reading','reference','sell','donate','giveaway', ...customTags];
+  const row = document.getElementById('filter-row');
+  row.querySelectorAll('.filter-chip').forEach(c => c.remove());
+  const html = [`<button class="filter-chip ${currentTagFilter==='all'?'active':''}" onclick="setTagFilter('all')">All</button>`]
+    .concat(allTags.map(t => `<button class="filter-chip ${currentTagFilter===t?'active':''}" onclick="setTagFilter('${escHtml(t)}')">${escHtml(t)}</button>`))
+    .join('');
+  row.insertAdjacentHTML('beforeend', html);
 }
+
+function getTagClass(tag) {
+  const map = { keepsake:'intent-keepsake', sell:'intent-sell', donate:'intent-donate',
+    giveaway:'intent-giveaway', 'to-read':'intent-to-read', reading:'intent-reading',
+    reference:'intent-reference', listened:'intent-listened', watching:'intent-watching', watched:'intent-watched' };
+  return map[tag] || 'intent-reference';
+}
+
+function renderFilterChipsOnLoad() { renderFilterChips(); }
 
 function renderCollection() {
   const q = document.getElementById('search-input').value.toLowerCase();
   let items = collection.filter(item => {
     if (currentTypeFilter !== 'all' && item.type !== currentTypeFilter) return false;
-    if (currentIntentFilter !== 'all' && item.intent !== currentIntentFilter) return false;
+    if (currentTagFilter !== 'all' && !(item.tags||[]).includes(currentTagFilter)) return false;
     if (q) {
       const haystack = (item.title + item.creator + item.genre + item.location).toLowerCase();
       if (!haystack.includes(q)) return false;
@@ -1044,8 +1084,9 @@ function renderCollection() {
   const el = document.getElementById('collection');
   document.getElementById('item-count').textContent = collection.length + ' item' + (collection.length !== 1 ? 's' : '');
 
-  // Stats
+  // Stats + filter chips (custom tags may have changed)
   renderStats();
+  renderFilterChips();
 
   if (items.length === 0) {
     el.innerHTML = `<div class="empty-state">
@@ -1069,7 +1110,7 @@ function renderCollection() {
         <div class="item-meta">
           <span class="badge badge-type">${TYPE_LABELS[item.type]||'Other'}</span>
           ${item.genre ? `<span class="badge badge-genre">${escHtml(item.genre)}</span>` : ''}
-          ${item.intent ? `<span class="badge badge-intent ${getIntentClass(item.intent)}">${escHtml(item.intent)}</span>` : ''}
+          ${(item.tags||[]).map(t=>`<span class="badge badge-intent ${getTagClass(t)}">${escHtml(t)}</span>`).join('')}
         </div>
         ${item.location ? `<div class="item-location">${escHtml(item.location)}</div>` : ''}
       </div>
@@ -1078,13 +1119,12 @@ function renderCollection() {
 }
 
 function renderStats() {
-  const counts = {};
-  collection.forEach(i => { counts[i.intent] = (counts[i.intent]||0)+1; });
-  const toAction = (counts['sell']||0) + (counts['donate']||0) + (counts['giveaway']||0);
-  const reading = (counts['reading']||0) + (counts['to-read']||0);
+  const hasTag = t => collection.filter(i => (i.tags||[]).includes(t)).length;
+  const toAction = hasTag('sell') + hasTag('donate') + hasTag('giveaway');
+  const reading = hasTag('reading') + hasTag('to-read');
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat"><span class="stat-num">${collection.length}</span><span class="stat-label">Total</span></div>
-    <div class="stat"><span class="stat-num">${counts['keepsake']||0}</span><span class="stat-label">Keepsakes</span></div>
+    <div class="stat"><span class="stat-num">${hasTag('keepsake')}</span><span class="stat-label">Keepsakes</span></div>
     <div class="stat"><span class="stat-num">${reading}</span><span class="stat-label">Reading Queue</span></div>
     <div class="stat"><span class="stat-num">${toAction}</span><span class="stat-label">To Action</span></div>
     <div class="stat"><span class="stat-num">${counts['sell']||0}</span><span class="stat-label">For Sale</span></div>
@@ -1112,69 +1152,50 @@ function clearForm() {
     if (el) el.value = '';
   });
   document.getElementById('f-type').value = 'book';
-  selectIntent('keepsake');
+  selectedTags = [];
+  renderTagChips();
   pendingCoverUrl = null;
   pendingIsbn = null;
-  updateIntentOptions();
+  onTypeChange();
 }
 
-// ─── INTENT ───────────────────────────────────────────────────────────────
-let intentOptions = {
-  book: [
-    {id:'keepsake',emoji:'🏛️',label:'keepsake'},
-    {id:'to-read',emoji:'🔖',label:'to read'},
-    {id:'reading',emoji:'📖',label:'reading'},
-    {id:'reference',emoji:'📐',label:'reference'},
-    {id:'donate',emoji:'🤝',label:'donate'},
-    {id:'giveaway',emoji:'🎁',label:'give away'},
-    {id:'sell',emoji:'🏷️',label:'sell'},
-  ],
-  vinyl: [
-    {id:'keepsake',emoji:'🏛️',label:'keepsake'},
-    {id:'listened',emoji:'🎵',label:'listened'},
-    {id:'reference',emoji:'📐',label:'reference'},
-    {id:'donate',emoji:'🤝',label:'donate'},
-    {id:'giveaway',emoji:'🎁',label:'give away'},
-    {id:'sell',emoji:'🏷️',label:'sell'},
-  ],
-  cd: [
-    {id:'keepsake',emoji:'🏛️',label:'keepsake'},
-    {id:'listened',emoji:'🎵',label:'listened'},
-    {id:'donate',emoji:'🤝',label:'donate'},
-    {id:'giveaway',emoji:'🎁',label:'give away'},
-    {id:'sell',emoji:'🏷️',label:'sell'},
-  ],
-  dvd: [
-    {id:'keepsake',emoji:'🏛️',label:'keepsake'},
-    {id:'watching',emoji:'🍿',label:'to watch'},
-    {id:'watched',emoji:'✅',label:'watched'},
-    {id:'donate',emoji:'🤝',label:'donate'},
-    {id:'giveaway',emoji:'🎁',label:'give away'},
-    {id:'sell',emoji:'🏷️',label:'sell'},
-  ],
-};
-
-function updateIntentOptions() {
+// ─── TAGS ─────────────────────────────────────────────────────────────────
+function onTypeChange() {
   const type = document.getElementById('f-type').value;
-  const label = CREATOR_LABELS[type] || 'Creator';
-  document.getElementById('creator-label').textContent = label;
-
-  const opts = intentOptions[type] || intentOptions.book;
-  const grid = document.getElementById('intent-grid');
-  grid.innerHTML = opts.map(o => `
-    <button class="intent-btn ${selectedIntent === o.id ? 'selected' : ''}" data-intent="${o.id}" onclick="selectIntent('${o.id}')">
-      <span class="intent-emoji">${o.emoji}</span>${o.label}
-    </button>
-  `).join('');
-
-  // if current selection not in new opts, default to keepsake
-  if (!opts.find(o => o.id === selectedIntent)) selectIntent('keepsake');
+  document.getElementById('creator-label').textContent = CREATOR_LABELS[type] || 'Creator';
 }
 
-function selectIntent(intent) {
-  selectedIntent = intent;
-  document.querySelectorAll('.intent-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.intent === intent);
+function toggleSuggestionTag(tag) {
+  if (selectedTags.includes(tag)) {
+    selectedTags = selectedTags.filter(t => t !== tag);
+  } else {
+    selectedTags = [...selectedTags, tag];
+  }
+  renderTagChips();
+}
+
+function addTagFromInput() {
+  const input = document.getElementById('tag-custom-input');
+  const tag = input.value.trim().toLowerCase();
+  if (tag && !selectedTags.includes(tag)) {
+    selectedTags = [...selectedTags, tag];
+    renderTagChips();
+  }
+  input.value = '';
+}
+
+function removeTag(tag) {
+  selectedTags = selectedTags.filter(t => t !== tag);
+  renderTagChips();
+}
+
+function renderTagChips() {
+  const row = document.getElementById('tag-chips-row');
+  if (row) row.innerHTML = selectedTags.map(t =>
+    `<span class="tag-chip">${escHtml(t)}<button class="tag-chip-remove" onclick="removeTag('${escHtml(t)}')" title="Remove">×</button></span>`
+  ).join('');
+  document.querySelectorAll('.tag-suggestion-btn').forEach(btn => {
+    btn.classList.toggle('active', selectedTags.includes(btn.dataset.tag));
   });
 }
 
@@ -1362,7 +1383,7 @@ function saveItem() {
     genre: document.getElementById('f-genre').value.trim(),
     year: document.getElementById('f-year').value.trim(),
     location: document.getElementById('f-location').value.trim(),
-    intent: selectedIntent,
+    tags: [...selectedTags],
     notes: document.getElementById('f-notes').value.trim(),
     coverUrl: pendingCoverUrl || null,
     isbn: pendingIsbn || document.getElementById('manual-isbn').value.trim() || null,
@@ -1405,7 +1426,7 @@ function openDetail(id) {
           <span class="badge badge-type">${TYPE_LABELS[item.type]||'Other'}</span>
           ${item.year ? `<span class="badge badge-type">${escHtml(item.year)}</span>` : ''}
           ${item.genre ? `<span class="badge badge-genre">${escHtml(item.genre)}</span>` : ''}
-          ${item.intent ? `<span class="badge badge-intent ${getIntentClass(item.intent)}">${escHtml(item.intent)}</span>` : ''}
+          ${(item.tags||[]).map(t=>`<span class="badge badge-intent ${getTagClass(t)}">${escHtml(t)}</span>`).join('')}
         </div>
       </div>
     </div>
@@ -1438,7 +1459,7 @@ function editItem(id) {
   pendingIsbn = item.isbn;
 
   document.getElementById('f-type').value = item.type;
-  updateIntentOptions();
+  onTypeChange();
   document.getElementById('f-title').value = item.title;
   document.getElementById('f-creator').value = item.creator || '';
   document.getElementById('f-genre').value = item.genre || '';
@@ -1446,7 +1467,8 @@ function editItem(id) {
   document.getElementById('f-location').value = item.location || '';
   document.getElementById('f-notes').value = item.notes || '';
   if (item.isbn) document.getElementById('manual-isbn').value = item.isbn;
-  selectIntent(item.intent || 'keepsake');
+  selectedTags = [...(item.tags || [])];
+  renderTagChips();
 
   if (item.coverUrl) {
     const pa = document.getElementById('fetch-preview-area');
@@ -1486,12 +1508,12 @@ function escHtml(str) {
 // Seed demo data if empty
 if (collection.length === 0) {
   collection = [
-    { id:'demo1', type:'book', title:'Braiding Sweetgrass', creator:'Robin Wall Kimmerer', genre:'Nature / Science', year:'2013', location:'Living room shelf', intent:'keepsake', notes:'One of my favorites. Lend freely but always ask back.', coverUrl:'https://covers.openlibrary.org/b/id/10710954-M.jpg', isbn:'9781571313560', addedAt: Date.now()-86400000*3 },
-    { id:'demo2', type:'vinyl', title:'Blue', creator:'Joni Mitchell', genre:'Folk', year:'1971', location:'Record cabinet, A–M', intent:'keepsake', notes:'Original pressing. Handle with care.', coverUrl:null, isbn:null, addedAt: Date.now()-86400000*2 },
-    { id:'demo3', type:'book', title:'The Left Hand of Darkness', creator:'Ursula K. Le Guin', genre:'Science Fiction', year:'1969', location:'Box #2, storage', intent:'to-read', notes:'', coverUrl:'https://covers.openlibrary.org/b/id/8474026-M.jpg', isbn:null, addedAt: Date.now()-86400000 },
-    { id:'demo4', type:'book', title:'Crying in H Mart', creator:'Michelle Zauner', genre:'Memoir', year:'2021', location:'Bedside table', intent:'reading', notes:'', coverUrl:'https://covers.openlibrary.org/b/id/12547191-M.jpg', isbn:null, addedAt: Date.now() },
-    { id:'demo5', type:'dvd', title:'Spirited Away', creator:'Hayao Miyazaki', genre:'Animation', year:'2001', location:'DVD shelf', intent:'keepsake', notes:'', coverUrl:null, isbn:null, addedAt: Date.now()-86400000*5 },
-    { id:'demo6', type:'book', title:'Sapiens', creator:'Yuval Noah Harari', genre:'History', year:'2011', location:'Office shelf', intent:'sell', notes:'Good condition. $8.', coverUrl:'https://covers.openlibrary.org/b/id/8739161-M.jpg', isbn:null, addedAt: Date.now()-86400000*7 },
+    { id:'demo1', type:'book', title:'Braiding Sweetgrass', creator:'Robin Wall Kimmerer', genre:'Nature / Science', year:'2013', location:'Living room shelf', tags:[], notes:'One of my favorites. Lend freely but always ask back.', coverUrl:'https://covers.openlibrary.org/b/id/10710954-M.jpg', isbn:'9781571313560', addedAt: Date.now()-86400000*3 },
+    { id:'demo2', type:'vinyl', title:'Blue', creator:'Joni Mitchell', genre:'Folk', year:'1971', location:'Record cabinet, A–M', tags:[], notes:'Original pressing. Handle with care.', coverUrl:null, isbn:null, addedAt: Date.now()-86400000*2 },
+    { id:'demo3', type:'book', title:'The Left Hand of Darkness', creator:'Ursula K. Le Guin', genre:'Science Fiction', year:'1969', location:'Box #2, storage', tags:[], notes:'', coverUrl:'https://covers.openlibrary.org/b/id/8474026-M.jpg', isbn:null, addedAt: Date.now()-86400000 },
+    { id:'demo4', type:'book', title:'Crying in H Mart', creator:'Michelle Zauner', genre:'Memoir', year:'2021', location:'Bedside table', tags:[], notes:'', coverUrl:'https://covers.openlibrary.org/b/id/12547191-M.jpg', isbn:null, addedAt: Date.now() },
+    { id:'demo5', type:'dvd', title:'Spirited Away', creator:'Hayao Miyazaki', genre:'Animation', year:'2001', location:'DVD shelf', tags:[], notes:'', coverUrl:null, isbn:null, addedAt: Date.now()-86400000*5 },
+    { id:'demo6', type:'book', title:'Sapiens', creator:'Yuval Noah Harari', genre:'History', year:'2011', location:'Office shelf', tags:[], notes:'Good condition. $8.', coverUrl:'https://covers.openlibrary.org/b/id/8739161-M.jpg', isbn:null, addedAt: Date.now()-86400000*7 },
   ];
   localStorage.setItem('stewardkeep_collection', JSON.stringify(collection));
   renderCollection();
@@ -1513,8 +1535,8 @@ function exportJSON() {
 }
 
 function exportCSV() {
-  const cols = ['id','type','title','creator','genre','year','location','intent','notes','isbn','coverUrl','addedAt'];
-  const rows = collection.map(item => cols.map(c => csvCell(item[c] ?? '')).join(','));
+  const cols = ['id','type','title','creator','genre','year','location','tags','notes','isbn','coverUrl','addedAt'];
+  const rows = collection.map(item => cols.map(c => c === 'tags' ? csvCell((item.tags||[]).join(';')) : csvCell(item[c] ?? '')).join(','));
   const blob = new Blob([[cols.join(','), ...rows].join('\n')], {type: 'text/csv'});
   triggerDownload(blob, 'stewardkeep-' + isoDate() + '.csv');
 }
