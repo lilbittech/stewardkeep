@@ -1028,8 +1028,20 @@ let editingId = null;
 const TYPE_ICONS = { book:'📚', vinyl:'💿', cd:'💽', dvd:'🎬', game:'🎮', magazine:'📰', other:'📦' };
 const TYPE_LABELS = { book:'Book', vinyl:'Vinyl', cd:'CD', dvd:'DVD', game:'Game', magazine:'Mag', other:'Other' };
 const CREATOR_LABELS = { book:'Author', vinyl:'Artist', cd:'Artist', dvd:'Director', game:'Publisher', magazine:'Issue', other:'Creator' };
+const PREDEFINED_TAGS = ['keepsake','to-read','reading','reference','sell','donate','giveaway','listened','watching','watched'];
 
 // ─── INIT ─────────────────────────────────────────────────────────────────
+// Migrate items that have intent but no tags
+let migrated = false;
+collection = collection.map(item => {
+  if (!Array.isArray(item.tags)) {
+    item.tags = item.intent ? [item.intent] : [];
+    migrated = true;
+  }
+  return item;
+});
+if (migrated) localStorage.setItem('stewardkeep_collection', JSON.stringify(collection));
+
 renderFilterChips();
 renderCollection();
 
@@ -1040,8 +1052,6 @@ function setTypeFilter(type) {
   event.target.classList.add('active');
   renderCollection();
 }
-
-const PREDEFINED_TAGS = ['keepsake','to-read','reading','reference','sell','donate','giveaway','listened','watching','watched'];
 
 function setTagFilter(tag) {
   currentTagFilter = tag;
