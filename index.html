@@ -1176,8 +1176,17 @@ async function decodeBarcodeFromFile(file) {
     const img = document.createElement('img');
     img.src = url;
     await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+
+    // Downscale large photos to max 1280px wide — ZXing is more reliable on smaller images
+    const MAX = 1280;
+    const canvas = document.createElement('canvas');
+    const scale = Math.min(1, MAX / img.naturalWidth);
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+
     const reader = new ZXingBrowser.BrowserMultiFormatReader();
-    const result = await reader.decodeFromImageElement(img);
+    const result = await reader.decodeFromCanvas(canvas);
     return result.getText().replace(/[^0-9X]/gi, '');
   } finally {
     URL.revokeObjectURL(url);
