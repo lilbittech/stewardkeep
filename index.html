@@ -1311,6 +1311,21 @@ function autoTagLanguage(tag) {
   }
 }
 
+function hasCJK(text) {
+  return /[一-鿿㐀-䶿豈-﫿]/.test(text);
+}
+
+async function convertPinyinTitle(pinyin) {
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=${encodeURIComponent(pinyin)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const chinese = data?.[0]?.map(seg => seg[0]).join('').trim();
+    if (chinese && hasCJK(chinese)) return `${chinese} (${pinyin})`;
+  } catch(_) {}
+  return pinyin;
+}
+
 async function lookupIsbn(isbn) {
   const previewArea = document.getElementById('fetch-preview-area');
   previewArea.style.display = 'block';
@@ -1337,7 +1352,9 @@ async function lookupIsbn(isbn) {
       pendingIsbn = isbn;
 
       // Auto-fill
-      if (title) document.getElementById('f-title').value = title;
+      const displayTitleOL = (langTag === 'chinese' && title && !hasCJK(title))
+        ? await convertPinyinTitle(title) : title;
+      if (displayTitleOL) document.getElementById('f-title').value = displayTitleOL;
       if (authors) document.getElementById('f-creator').value = authors;
       if (genres) document.getElementById('f-genre').value = genres.split(',')[0].trim();
       if (year) document.getElementById('f-year').value = year.match(/\d{4}/)?.[0] || year;
@@ -1347,7 +1364,7 @@ async function lookupIsbn(isbn) {
       previewArea.innerHTML = `<div class="fetch-preview">
         ${coverUrl ? `<img src="${coverUrl}" alt="cover">` : '<div style="width:50px;height:70px;background:var(--bg3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:24px">📚</div>'}
         <div class="fetch-preview-info">
-          <div class="fetch-preview-title">${escHtml(title)}</div>
+          <div class="fetch-preview-title">${escHtml(displayTitleOL)}</div>
           <div class="fetch-preview-sub">${escHtml(authors)}</div>
           ${year ? `<div class="fetch-preview-sub">${escHtml(year)}</div>` : ''}
           ${publisher ? `<div class="fetch-preview-sub" style="font-size:11px">${escHtml(publisher)}</div>` : ''}
@@ -1374,7 +1391,9 @@ async function lookupIsbn(isbn) {
       pendingCoverUrl = coverUrl;
       pendingIsbn = isbn;
 
-      if (title) document.getElementById('f-title').value = title;
+      const displayTitleGB = (langTag === 'chinese' && title && !hasCJK(title))
+        ? await convertPinyinTitle(title) : title;
+      if (displayTitleGB) document.getElementById('f-title').value = displayTitleGB;
       if (authors) document.getElementById('f-creator').value = authors;
       if (cats) document.getElementById('f-genre').value = cats.split('/')[0].trim();
       if (year) document.getElementById('f-year').value = year.substring(0,4);
@@ -1384,7 +1403,7 @@ async function lookupIsbn(isbn) {
       previewArea.innerHTML = `<div class="fetch-preview">
         ${coverUrl ? `<img src="${coverUrl}" alt="cover">` : '<div style="width:50px;height:70px;background:var(--bg3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:24px">📚</div>'}
         <div class="fetch-preview-info">
-          <div class="fetch-preview-title">${escHtml(title)}</div>
+          <div class="fetch-preview-title">${escHtml(displayTitleGB)}</div>
           <div class="fetch-preview-sub">${escHtml(authors)}</div>
           ${year ? `<div class="fetch-preview-sub">${escHtml(year)}</div>` : ''}
           <div class="fetch-status">✓ Found via Google Books</div>
