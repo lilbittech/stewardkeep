@@ -979,6 +979,11 @@
     </div>
 
     <div class="form-field" style="margin-bottom:12px">
+      <label class="form-label">Publisher</label>
+      <input class="form-input" type="text" id="f-publisher" placeholder="Publisher…">
+    </div>
+
+    <div class="form-field" style="margin-bottom:12px">
       <label class="form-label">Where is it stored?</label>
       <input class="form-input" type="text" id="f-location" placeholder="Living room shelf, Box #3, Storage unit…">
     </div>
@@ -1148,7 +1153,7 @@ function closeAddModal() {
 }
 
 function clearForm() {
-  ['f-title','f-creator','f-genre','f-year','f-location','f-notes','manual-isbn'].forEach(id => {
+  ['f-title','f-creator','f-genre','f-year','f-publisher','f-location','f-notes','manual-isbn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1285,6 +1290,27 @@ function lookupManual() {
   lookupIsbn(isbn);
 }
 
+function langCodeToTag(code) {
+  const map = {
+    en:'english', zh:'chinese', fr:'french', de:'german', es:'spanish',
+    ja:'japanese', ko:'korean', pt:'portuguese', it:'italian', ru:'russian',
+    ar:'arabic', nl:'dutch', pl:'polish', sv:'swedish', vi:'vietnamese',
+    eng:'english', chi:'chinese', zho:'chinese', fre:'french', fra:'french',
+    ger:'german', deu:'german', spa:'spanish', jpn:'japanese', kor:'korean',
+    por:'portuguese', ita:'italian', rus:'russian', ara:'arabic',
+    dut:'dutch', nld:'dutch', pol:'polish', swe:'swedish', vie:'vietnamese'
+  };
+  return map[code?.toLowerCase()] || null;
+}
+
+function autoTagLanguage(tag) {
+  if (tag && !selectedTags.includes(tag)) {
+    selectedTags = [...selectedTags, tag];
+    renderTagSuggestions();
+    renderTagChips();
+  }
+}
+
 async function lookupIsbn(isbn) {
   const previewArea = document.getElementById('fetch-preview-area');
   previewArea.style.display = 'block';
@@ -1304,6 +1330,8 @@ async function lookupIsbn(isbn) {
       const year = book.publish_date || '';
       const genres = (book.subjects||[]).slice(0,3).map(s=>s.name||s).join(', ');
       const publisher = (book.publishers||[]).map(p=>p.name).join(', ');
+      const langKey = (book.languages||[])[0]?.key?.split('/').pop();
+      const langTag = langCodeToTag(langKey);
 
       pendingCoverUrl = coverUrl;
       pendingIsbn = isbn;
@@ -1313,6 +1341,8 @@ async function lookupIsbn(isbn) {
       if (authors) document.getElementById('f-creator').value = authors;
       if (genres) document.getElementById('f-genre').value = genres.split(',')[0].trim();
       if (year) document.getElementById('f-year').value = year.match(/\d{4}/)?.[0] || year;
+      if (publisher) document.getElementById('f-publisher').value = publisher;
+      autoTagLanguage(langTag);
 
       previewArea.innerHTML = `<div class="fetch-preview">
         ${coverUrl ? `<img src="${coverUrl}" alt="cover">` : '<div style="width:50px;height:70px;background:var(--bg3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:24px">📚</div>'}
@@ -1338,6 +1368,8 @@ async function lookupIsbn(isbn) {
       const coverUrl = vol.imageLinks?.thumbnail?.replace('http://','https://') || null;
       const year = vol.publishedDate || '';
       const cats = (vol.categories||[]).join(', ');
+      const publisher = vol.publisher || '';
+      const langTag = langCodeToTag(vol.language);
 
       pendingCoverUrl = coverUrl;
       pendingIsbn = isbn;
@@ -1346,6 +1378,8 @@ async function lookupIsbn(isbn) {
       if (authors) document.getElementById('f-creator').value = authors;
       if (cats) document.getElementById('f-genre').value = cats.split('/')[0].trim();
       if (year) document.getElementById('f-year').value = year.substring(0,4);
+      if (publisher) document.getElementById('f-publisher').value = publisher;
+      autoTagLanguage(langTag);
 
       previewArea.innerHTML = `<div class="fetch-preview">
         ${coverUrl ? `<img src="${coverUrl}" alt="cover">` : '<div style="width:50px;height:70px;background:var(--bg3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:24px">📚</div>'}
@@ -1406,6 +1440,7 @@ function saveItem() {
     creator: document.getElementById('f-creator').value.trim(),
     genre: document.getElementById('f-genre').value.trim(),
     year: document.getElementById('f-year').value.trim(),
+    publisher: document.getElementById('f-publisher').value.trim(),
     location: document.getElementById('f-location').value.trim(),
     tags: [...selectedTags],
     notes: document.getElementById('f-notes').value.trim(),
@@ -1455,6 +1490,7 @@ function openDetail(id) {
       </div>
     </div>
 
+    ${item.publisher ? `<div class="detail-field"><div class="detail-field-label">Publisher</div><div class="detail-field-value">${escHtml(item.publisher)}</div></div>` : ''}
     ${item.location ? `<div class="detail-field"><div class="detail-field-label">Stored at</div><div class="detail-field-value">📍 ${escHtml(item.location)}</div></div>` : ''}
     ${item.isbn ? `<div class="detail-field"><div class="detail-field-label">ISBN / Barcode</div><div class="detail-field-value" style="font-family:var(--font-mono);font-size:13px">${escHtml(item.isbn)}</div></div>` : ''}
     ${item.notes ? `<div class="detail-field"><div class="detail-field-label">Notes</div><div class="detail-field-value">${escHtml(item.notes)}</div></div>` : ''}
@@ -1488,6 +1524,7 @@ function editItem(id) {
   document.getElementById('f-creator').value = item.creator || '';
   document.getElementById('f-genre').value = item.genre || '';
   document.getElementById('f-year').value = item.year || '';
+  document.getElementById('f-publisher').value = item.publisher || '';
   document.getElementById('f-location').value = item.location || '';
   document.getElementById('f-notes').value = item.notes || '';
   if (item.isbn) document.getElementById('manual-isbn').value = item.isbn;
