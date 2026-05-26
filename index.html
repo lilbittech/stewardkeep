@@ -508,8 +508,49 @@
     margin-top: 4px;
   }
 
-  #barcode-input {
+  .scan-video-wrap {
     display: none;
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    background: #000;
+    aspect-ratio: 4/3;
+  }
+  .scan-video-wrap.active { display: block; }
+  .scan-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scan-viewfinder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .scan-viewfinder::after {
+    content: '';
+    width: 65%;
+    height: 30%;
+    border: 2px solid var(--amber);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1000px rgba(0,0,0,0.45);
+  }
+  .scan-cancel-btn {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 20px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
   }
 
   /* FORM */
@@ -849,12 +890,16 @@
 
     <!-- Scan / Manual lookup -->
     <div id="scan-section">
-      <div class="scan-area" id="scan-area" onclick="triggerScan()">
+      <div class="scan-area" id="scan-area" onclick="startScan()">
         <div class="scan-icon">📷</div>
-        <div class="scan-label">Scan Barcode</div>
-        <div class="scan-sublabel">Tap to use camera (ISBN, UPC)</div>
+        <div class="scan-label" id="scan-label">Scan Barcode</div>
+        <div class="scan-sublabel" id="scan-sublabel">Tap to use camera (ISBN, UPC)</div>
       </div>
-      <input type="file" id="barcode-input" accept="image/*" onchange="handleBarcodeImage(event)">
+      <div class="scan-video-wrap" id="scan-video-wrap">
+        <video id="scan-video" autoplay muted playsinline></video>
+        <div class="scan-viewfinder"></div>
+        <button class="scan-cancel-btn" onclick="stopScan()">✕ Cancel</button>
+      </div>
 
       <div class="isbn-row">
         <input class="form-input" type="text" id="manual-isbn" placeholder="Enter ISBN / barcode manually…" inputmode="numeric">
@@ -1054,6 +1099,7 @@ function openAddModal() {
 }
 
 function closeAddModal() {
+  stopScan();
   document.getElementById('add-modal').classList.remove('open');
   document.getElementById('fetch-preview-area').style.display = 'none';
   document.getElementById('fetch-preview-area').innerHTML = '';
@@ -1135,72 +1181,48 @@ function selectIntent(intent) {
 // ─── BARCODE SCAN ─────────────────────────────────────────────────────────
 let pendingCoverUrl = null;
 let pendingIsbn = null;
+let scanReader = null;
+let scanStopping = false;
 
-function triggerScan() {
-  document.getElementById('barcode-input').click();
-}
-
-async function handleBarcodeImage(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
+async function startScan() {
+  const wrap = document.getElementById('scan-video-wrap');
   const area = document.getElementById('scan-area');
-  area.classList.add('scanning');
-  area.querySelector('.scan-label').textContent = 'Decoding barcode…';
-  area.querySelector('.scan-sublabel').textContent = '';
+  const video = document.getElementById('scan-video');
 
-  // Use the Claude API to decode the barcode from the image
+  area.style.display = 'none';
+  wrap.classList.add('active');
+  scanStopping = false;
+
   try {
-    const barcode = await decodeBarcodeFromFile(file);
-
+    scanReader = new ZXingBrowser.BrowserMultiFormatReader();
+    const result = await scanReader.decodeOnceFromConstraints(
+      { video: { facingMode: 'environment' } },
+      video
+    );
+    stopScan();
+    const barcode = result.getText().replace(/[^0-9X]/gi, '');
     if (barcode) {
-      area.querySelector('.scan-label').textContent = `Found: ${barcode}`;
-      area.querySelector('.scan-sublabel').textContent = 'Looking up metadata…';
+      document.getElementById('scan-label').textContent = 'Found: ' + barcode;
+      document.getElementById('scan-sublabel').textContent = 'Looking up metadata…';
       document.getElementById('manual-isbn').value = barcode;
       await lookupIsbn(barcode);
-    } else {
-      area.querySelector('.scan-label').textContent = 'No barcode found';
-      area.querySelector('.scan-sublabel').textContent = 'Try entering the ISBN manually below';
+      document.getElementById('scan-label').textContent = 'Scan Barcode';
+      document.getElementById('scan-sublabel').textContent = 'Tap to use camera (ISBN, UPC)';
     }
   } catch(e) {
-    area.querySelector('.scan-label').textContent = 'Scan error';
-    area.querySelector('.scan-sublabel').textContent = e.name + ': ' + e.message;
+    if (!scanStopping) {
+      stopScan();
+      document.getElementById('scan-label').textContent = 'Camera error';
+      document.getElementById('scan-sublabel').textContent = e.message || e.name;
+    }
   }
-  area.classList.remove('scanning');
-  event.target.value = '';
 }
 
-async function decodeBarcodeFromFile(file) {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = document.createElement('img');
-    img.src = url;
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-
-    // iOS Safari corrupts canvas pixel data for JPEGs larger than ~2MP.
-    // Downsample with our own canvas first, export as lossless PNG data URL,
-    // then hand the small clean image to ZXing.
-    const MAX = 1500;
-    const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
-    const w = Math.round(img.naturalWidth * scale);
-    const h = Math.round(img.naturalHeight * scale);
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/png');
-
-    const reader = new ZXingBrowser.BrowserMultiFormatReader();
-    try {
-      const result = await reader.decodeFromImageElement(dataUrl);
-      return result.getText().replace(/[^0-9X]/gi, '');
-    } catch(e) {
-      e.message = e.message + ' [' + w + 'x' + h + ']';
-      throw e;
-    }
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+function stopScan() {
+  scanStopping = true;
+  if (scanReader) { scanReader.reset(); scanReader = null; }
+  document.getElementById('scan-video-wrap').classList.remove('active');
+  document.getElementById('scan-area').style.display = '';
 }
 
 function lookupManual() {
