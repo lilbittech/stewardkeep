@@ -1184,6 +1184,13 @@ let pendingIsbn = null;
 let scanReader = null;
 let scanStopping = false;
 
+function setScanStatus(label, sub) {
+  const l = document.getElementById('scan-label');
+  const s = document.getElementById('scan-sublabel');
+  if (l) l.textContent = label;
+  if (s) s.textContent = sub;
+}
+
 async function startScan() {
   const wrap = document.getElementById('scan-video-wrap');
   const area = document.getElementById('scan-area');
@@ -1193,8 +1200,11 @@ async function startScan() {
   wrap.classList.add('active');
   scanStopping = false;
 
+  setScanStatus('Requesting camera…', '');
+
   try {
     scanReader = new ZXingBrowser.BrowserMultiFormatReader();
+    setScanStatus('Camera active — aim at barcode', 'Hold steady, barcode will detect automatically');
     const result = await scanReader.decodeOnceFromConstraints(
       { video: { facingMode: 'environment' } },
       video
@@ -1202,27 +1212,26 @@ async function startScan() {
     stopScan();
     const barcode = result.getText().replace(/[^0-9X]/gi, '');
     if (barcode) {
-      document.getElementById('scan-label').textContent = 'Found: ' + barcode;
-      document.getElementById('scan-sublabel').textContent = 'Looking up metadata…';
+      setScanStatus('Found: ' + barcode, 'Looking up metadata…');
       document.getElementById('manual-isbn').value = barcode;
       await lookupIsbn(barcode);
-      document.getElementById('scan-label').textContent = 'Scan Barcode';
-      document.getElementById('scan-sublabel').textContent = 'Tap to use camera (ISBN, UPC)';
+      setScanStatus('Scan Barcode', 'Tap to use camera (ISBN, UPC)');
     }
   } catch(e) {
     if (!scanStopping) {
       stopScan();
-      document.getElementById('scan-label').textContent = 'Camera error';
-      document.getElementById('scan-sublabel').textContent = e.message || e.name;
+      setScanStatus('Error: ' + (e.name || 'Unknown'), e.message || '');
     }
   }
 }
 
 function stopScan() {
   scanStopping = true;
-  if (scanReader) { scanReader.reset(); scanReader = null; }
-  document.getElementById('scan-video-wrap').classList.remove('active');
-  document.getElementById('scan-area').style.display = '';
+  try { if (scanReader) { scanReader.reset(); scanReader = null; } } catch(_) {}
+  const wrap = document.getElementById('scan-video-wrap');
+  const area = document.getElementById('scan-area');
+  if (wrap) wrap.classList.remove('active');
+  if (area) area.style.display = '';
 }
 
 function lookupManual() {
