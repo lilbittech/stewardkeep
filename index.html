@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>StewardKeep — Media Tracker</title>
+<script src="https://unpkg.com/@zxing/browser@0.2.0/umd/zxing-browser.min.js"></script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#c8922a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1148,8 +1149,7 @@ async function handleBarcodeImage(event) {
 
   // Use the Claude API to decode the barcode from the image
   try {
-    const base64 = await fileToBase64(file);
-    const barcode = await decodeBarcodeWithClaude(base64, file.type);
+    const barcode = await decodeBarcodeFromFile(file);
 
     if (barcode) {
       area.querySelector('.scan-label').textContent = `Found: ${barcode}`;
@@ -1168,35 +1168,18 @@ async function handleBarcodeImage(event) {
   event.target.value = '';
 }
 
-function fileToBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-}
-
-async function decodeBarcodeWithClaude(base64, mimeType) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 100,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-          { type: 'text', text: 'Look at this image and find the barcode or ISBN number. Return ONLY the numeric barcode/ISBN digits, nothing else. If there is no barcode, return the single word: NONE' }
-        ]
-      }]
-    })
-  });
-  const data = await response.json();
-  const text = data.content?.[0]?.text?.trim() || '';
-  if (text === 'NONE' || text.length < 8) return null;
-  return text.replace(/[^0-9X]/gi, '');
+async function decodeBarcodeFromFile(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = document.createElement('img');
+    img.src = url;
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+    const reader = new ZXingBrowser.BrowserMultiFormatReader();
+    const result = await reader.decodeFromImageElement(img);
+    return result.getText().replace(/[^0-9X]/gi, '');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function lookupManual() {
