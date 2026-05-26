@@ -22,11 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject cache version
+      - name: Inject version
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           sed -i "s/const CACHE = 'stewardkeep-[^']*'/const CACHE = 'stewardkeep-${SHORT_SHA}'/" sw.js
-          echo "Cache key: stewardkeep-${SHORT_SHA}"
+          sed -i "s/id=\"app-version\">[^<]*/id=\"app-version\">${SHORT_SHA}/" index.html
+          echo "Version: ${SHORT_SHA}"
 
       - uses: actions/configure-pages@v4
 

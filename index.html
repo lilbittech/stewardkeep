@@ -97,6 +97,7 @@
   }
 
   .header-actions { display: flex; align-items: center; gap: 6px; }
+  .app-version { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; }
 
   .action-btn {
     font-family: var(--font-mono);
@@ -797,6 +798,7 @@
     <div class="logo">Steward<span>Keep</span></div>
     <div class="header-actions">
       <div class="item-count" id="item-count">0 items</div>
+      <span class="app-version" id="app-version">dev</span>
       <div class="export-wrap">
         <button class="action-btn" onclick="toggleExportMenu(event)">Export ↓</button>
         <div class="export-menu" id="export-menu">
