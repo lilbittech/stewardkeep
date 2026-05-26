@@ -529,8 +529,8 @@
   }
   .scan-viewfinder::after {
     content: '';
-    width: 65%;
-    height: 30%;
+    width: 85%;
+    height: 40%;
     border: 2px solid var(--amber);
     border-radius: 4px;
     box-shadow: 0 0 0 1000px rgba(0,0,0,0.45);
@@ -1206,7 +1206,7 @@ async function startScan() {
     scanReader = new ZXingBrowser.BrowserMultiFormatReader();
     setScanStatus('Camera active — aim at barcode', 'Hold steady, barcode will detect automatically');
     const result = await scanReader.decodeOnceFromConstraints(
-      { video: { facingMode: 'environment' } },
+      { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } },
       video
     );
     stopScan();
