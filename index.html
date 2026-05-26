@@ -1332,7 +1332,7 @@ async function lookupIsbn(isbn) {
       return;
     }
 
-    previewArea.innerHTML = `<div class="fetch-preview"><div class="fetch-preview-info"><div class="fetch-preview-title" style="color:var(--text-muted)">Not found in databases</div><div class="fetch-preview-sub">Enter details manually below</div></div></div>`;
+    previewArea.innerHTML = `<div class="fetch-preview"><div class="fetch-preview-info"><div class="fetch-preview-title" style="color:var(--text-muted)">Not found in databases</div><div class="fetch-preview-sub">Enter details manually, or search Google.</div><a href="https://www.google.com/search?q=ISBN+${isbn}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-family:var(--font-mono);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;padding:6px 14px;border:1px solid var(--border);border-radius:4px;color:var(--text-muted);text-decoration:none;">Search Google ↗</a></div></div>`;
 
   } catch(e) {
     previewArea.innerHTML = `<div class="fetch-preview"><div class="fetch-preview-info"><div class="fetch-preview-title" style="color:var(--text-muted)">Lookup failed</div><div class="fetch-preview-sub">Enter details manually</div></div></div>`;
