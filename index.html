@@ -1172,32 +1172,22 @@ async function handleBarcodeImage(event) {
 
 async function decodeBarcodeFromFile(file) {
   const url = URL.createObjectURL(file);
-  let scaledUrl = null;
   try {
     const img = document.createElement('img');
     img.src = url;
     await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-
-    // Downscale large photos — keep enough resolution for ZXing to find the barcode
-    const MAX = 1920;
-    const scale = Math.min(1, MAX / img.naturalWidth);
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(img.naturalWidth * scale);
-    canvas.height = Math.round(img.naturalHeight * scale);
-    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    // Convert canvas back to an image element (decodeFromImageElement is the stable API)
-    scaledUrl = await new Promise(res => canvas.toBlob(b => res(URL.createObjectURL(b)), 'image/png'));
-    const scaledImg = document.createElement('img');
-    scaledImg.src = scaledUrl;
-    await new Promise((res, rej) => { scaledImg.onload = res; scaledImg.onerror = rej; });
+    const dims = img.naturalWidth + 'x' + img.naturalHeight;
 
     const reader = new ZXingBrowser.BrowserMultiFormatReader();
-    const result = await reader.decodeFromImageElement(scaledImg);
-    return result.getText().replace(/[^0-9X]/gi, '');
+    try {
+      const result = await reader.decodeFromImageElement(img);
+      return result.getText().replace(/[^0-9X]/gi, '');
+    } catch(e) {
+      e.message = e.message + ' [' + dims + ']';
+      throw e;
+    }
   } finally {
     URL.revokeObjectURL(url);
-    if (scaledUrl) URL.revokeObjectURL(scaledUrl);
   }
 }
 
