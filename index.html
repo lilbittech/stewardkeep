@@ -984,17 +984,7 @@
     </div>
 
     <div class="form-section-title">Tags</div>
-    <div class="tag-suggestion-row">
-      <button class="tag-suggestion-btn" data-tag="keepsake" onclick="toggleSuggestionTag('keepsake')">🏛️ keepsake</button>
-      <button class="tag-suggestion-btn" data-tag="to-read" onclick="toggleSuggestionTag('to-read')">🔖 to read</button>
-      <button class="tag-suggestion-btn" data-tag="reading" onclick="toggleSuggestionTag('reading')">📖 reading</button>
-      <button class="tag-suggestion-btn" data-tag="reference" onclick="toggleSuggestionTag('reference')">📐 reference</button>
-      <button class="tag-suggestion-btn" data-tag="donate" onclick="toggleSuggestionTag('donate')">🤝 donate</button>
-      <button class="tag-suggestion-btn" data-tag="giveaway" onclick="toggleSuggestionTag('giveaway')">🎁 give away</button>
-      <button class="tag-suggestion-btn" data-tag="sell" onclick="toggleSuggestionTag('sell')">🏷️ sell</button>
-      <button class="tag-suggestion-btn" data-tag="listened" onclick="toggleSuggestionTag('listened')">🎵 listened</button>
-      <button class="tag-suggestion-btn" data-tag="watched" onclick="toggleSuggestionTag('watched')">✅ watched</button>
-    </div>
+    <div class="tag-suggestion-row" id="tag-suggestion-row"></div>
     <div class="tag-custom-row">
       <input class="form-input" type="text" id="tag-custom-input" placeholder="Custom tag (e.g. english, borrowed)…" onkeydown="if(event.key==='Enter'){event.preventDefault();addTagFromInput();}">
       <button onclick="addTagFromInput()">Add</button>
@@ -1145,6 +1135,7 @@ function renderStats() {
 function openAddModal() {
   editingId = null;
   clearForm();
+  renderTagSuggestions();
   document.getElementById('add-modal').classList.add('open');
 }
 
@@ -1170,6 +1161,29 @@ function clearForm() {
 }
 
 // ─── TAGS ─────────────────────────────────────────────────────────────────
+const TAG_EMOJI = {
+  keepsake:'🏛️', 'to-read':'🔖', reading:'📖', reference:'📐',
+  donate:'🤝', giveaway:'🎁', sell:'🏷️', listened:'🎵', watching:'👁️', watched:'✅'
+};
+
+function renderTagSuggestions() {
+  const used = [...new Set(collection.flatMap(i => i.tags || []))];
+  const all = [...new Set([...PREDEFINED_TAGS, ...used])].sort((a, b) => {
+    const ai = PREDEFINED_TAGS.indexOf(a), bi = PREDEFINED_TAGS.indexOf(b);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return a.localeCompare(b);
+  });
+  const row = document.getElementById('tag-suggestion-row');
+  if (!row) return;
+  row.innerHTML = all.map(t => {
+    const label = TAG_EMOJI[t] ? `${TAG_EMOJI[t]} ${t}` : t;
+    const active = selectedTags.includes(t) ? ' active' : '';
+    return `<button class="tag-suggestion-btn${active}" data-tag="${escHtml(t)}" onclick="toggleSuggestionTag('${escHtml(t)}')">${escHtml(label)}</button>`;
+  }).join('');
+}
+
 function onTypeChange() {
   const type = document.getElementById('f-type').value;
   document.getElementById('creator-label').textContent = CREATOR_LABELS[type] || 'Creator';
@@ -1478,6 +1492,7 @@ function editItem(id) {
   document.getElementById('f-notes').value = item.notes || '';
   if (item.isbn) document.getElementById('manual-isbn').value = item.isbn;
   selectedTags = [...(item.tags || [])];
+  renderTagSuggestions();
   renderTagChips();
 
   if (item.coverUrl) {
