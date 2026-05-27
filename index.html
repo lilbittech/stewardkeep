@@ -1300,7 +1300,9 @@ function langCodeToTag(code) {
     por:'portuguese', ita:'italian', rus:'russian', ara:'arabic',
     dut:'dutch', nld:'dutch', pol:'polish', swe:'swedish', vie:'vietnamese'
   };
-  return map[code?.toLowerCase()] || null;
+  if (!code) return null;
+  const c = code.toLowerCase().split('-')[0].split('_')[0];
+  return map[c] || null;
 }
 
 function autoTagLanguage(tag) {
@@ -1315,10 +1317,19 @@ function hasCJK(text) {
   return /[一-鿿㐀-䶿豈-﫿]/.test(text);
 }
 
-async function convertPinyinTitle(pinyin) {
+async function convertPinyinTitle(pinyin, isbn) {
+  // Primary: ask Google Books for Chinese-language edition — gets the real CJK title
+  if (isbn) {
+    try {
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&langRestrict=zh`);
+      const data = await res.json();
+      const chTitle = data?.items?.[0]?.volumeInfo?.title;
+      if (chTitle && hasCJK(chTitle)) return `${chTitle} (${pinyin})`;
+    } catch(_) {}
+  }
+  // Fallback: Google Translate with Chinese source hint
   try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=${encodeURIComponent(pinyin)}`;
-    const res = await fetch(url);
+    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh&tl=zh-CN&dt=t&q=${encodeURIComponent(pinyin)}`);
     const data = await res.json();
     const chinese = data?.[0]?.map(seg => seg[0]).join('').trim();
     if (chinese && hasCJK(chinese)) return `${chinese} (${pinyin})`;
@@ -1353,7 +1364,7 @@ async function lookupIsbn(isbn) {
 
       // Auto-fill
       const displayTitleOL = (langTag === 'chinese' && title && !hasCJK(title))
-        ? await convertPinyinTitle(title) : title;
+        ? await convertPinyinTitle(title, isbn) : title;
       if (displayTitleOL) document.getElementById('f-title').value = displayTitleOL;
       if (authors) document.getElementById('f-creator').value = authors;
       if (genres) document.getElementById('f-genre').value = genres.split(',')[0].trim();
@@ -1392,7 +1403,7 @@ async function lookupIsbn(isbn) {
       pendingIsbn = isbn;
 
       const displayTitleGB = (langTag === 'chinese' && title && !hasCJK(title))
-        ? await convertPinyinTitle(title) : title;
+        ? await convertPinyinTitle(title, isbn) : title;
       if (displayTitleGB) document.getElementById('f-title').value = displayTitleGB;
       if (authors) document.getElementById('f-creator').value = authors;
       if (cats) document.getElementById('f-genre').value = cats.split('/')[0].trim();
