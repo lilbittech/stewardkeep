@@ -1292,10 +1292,13 @@ function lookupManual() {
 
 function guessLangFromIsbn(isbn) {
   const n = (isbn || '').replace(/[^0-9]/g, '');
+  // 13-digit: mainland China, HK, Taiwan
   if (n.startsWith('9787') || n.startsWith('978962') ||
       n.startsWith('978957') || n.startsWith('978986') ||
-      n.startsWith('978626') || n.startsWith('978988') ||
-      (n.length === 10 && n.startsWith('7'))) return 'chinese';
+      n.startsWith('978626') || n.startsWith('978988')) return 'chinese';
+  // 10-digit: mainland (7-), HK (962-), Taiwan (957-, 986-)
+  if (n.length === 10 && (n.startsWith('7') || n.startsWith('962') ||
+      n.startsWith('957') || n.startsWith('986'))) return 'chinese';
   return null;
 }
 
@@ -1345,13 +1348,14 @@ async function convertPinyinTitle(pinyin, isbn, existingItems) {
       }
     } catch(_) {}
   }
-  // 3. Search GB by title text with Chinese restriction (title search, separate quota)
+  // 3. Search OL by title text — no quota issues, may return CJK title
   try {
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(pinyin)}&langRestrict=zh&maxResults=5`);
+    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(pinyin)}&lang=chi&fields=title&limit=5`);
     const data = await res.json();
-    console.log('[SK] GB title search items:', data?.items?.length, data?.items?.map(i => i.volumeInfo?.title));
-    const hit = data?.items?.find(i => hasCJK(i.volumeInfo?.title || ''));
-    if (hit) return { title: `${hit.volumeInfo.title} (${pinyin})`, isChinese: true };
+    const titles = (data?.docs || []).map(d => d.title).filter(Boolean);
+    console.log('[SK] OL search titles:', titles);
+    const hit = titles.find(t => hasCJK(t));
+    if (hit) return { title: `${hit} (${pinyin})`, isChinese: true };
   } catch(_) {}
   return { title: pinyin, isChinese: false };
 }
