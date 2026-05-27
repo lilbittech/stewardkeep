@@ -1350,7 +1350,7 @@ async function convertPinyinTitle(pinyin, isbn, existingItems) {
   }
   // 3. Google Input Tools pinyin IME — built for pinyin→CJK, no quota issues
   try {
-    const pinyinLower = pinyin.toLowerCase().replace(/[^a-z\s]/g, ' ').trim();
+    const pinyinLower = pinyin.toLowerCase().replace(/[^a-z]/g, '');
     const res = await fetch(`https://inputtools.google.com/request?itc=zh-t-i0-pinyin&num=3&ie=utf-8&text=${encodeURIComponent(pinyinLower)}`);
     const data = await res.json();
     const candidates = data?.[1]?.[0]?.[1] || [];
