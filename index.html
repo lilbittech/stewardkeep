@@ -1326,6 +1326,7 @@ function hasCJK(text) {
   return /[一-鿿㐀-䶿豈-﫿]/.test(text);
 }
 
+// Returns { title, isChinese }
 async function convertPinyinTitle(pinyin, isbn) {
   // Primary: ask Google Books for Chinese-language edition — gets the real CJK title
   if (isbn) {
@@ -1333,7 +1334,8 @@ async function convertPinyinTitle(pinyin, isbn) {
       const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&langRestrict=zh`);
       const data = await res.json();
       const chTitle = data?.items?.[0]?.volumeInfo?.title;
-      if (chTitle && hasCJK(chTitle)) return `${chTitle} (${pinyin})`;
+      console.log('[SK] convertPinyinTitle GB zh result:', chTitle);
+      if (chTitle && hasCJK(chTitle)) return { title: `${chTitle} (${pinyin})`, isChinese: true };
     } catch(_) {}
   }
   // Fallback: Google Translate with Chinese source hint
@@ -1341,9 +1343,9 @@ async function convertPinyinTitle(pinyin, isbn) {
     const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh&tl=zh-CN&dt=t&q=${encodeURIComponent(pinyin)}`);
     const data = await res.json();
     const chinese = data?.[0]?.map(seg => seg[0]).join('').trim();
-    if (chinese && hasCJK(chinese)) return `${chinese} (${pinyin})`;
+    if (chinese && hasCJK(chinese)) return { title: `${chinese} (${pinyin})`, isChinese: true };
   } catch(_) {}
-  return pinyin;
+  return { title: pinyin, isChinese: false };
 }
 
 async function lookupIsbn(isbn) {
@@ -1367,25 +1369,24 @@ async function lookupIsbn(isbn) {
       const publisher = (book.publishers||[]).map(p=>p.name).join(', ');
       const langKey = (book.languages||[])[0]?.key?.split('/').pop();
       const langTag = langCodeToTag(langKey) || guessLangFromIsbn(isbn);
-      console.log('[SK] OL title:', title, 'langKey:', langKey, 'langTag:', langTag, 'hasCJK:', hasCJK(title));
+      console.log('[SK] OL isbn:', isbn, 'title:', title, 'langKey:', langKey, 'langTag:', langTag, 'hasCJK:', hasCJK(title));
 
       pendingCoverUrl = coverUrl;
       pendingIsbn = isbn;
 
-      // Auto-fill
-      const displayTitleOL = (langTag === 'chinese' && title && !hasCJK(title))
-        ? await convertPinyinTitle(title, isbn) : title;
-      if (displayTitleOL) document.getElementById('f-title').value = displayTitleOL;
+      // Auto-fill — attempt pinyin→CJK for any title without Chinese characters
+      const olConv = (title && !hasCJK(title)) ? await convertPinyinTitle(title, isbn) : { title, isChinese: false };
+      if (olConv.title) document.getElementById('f-title').value = olConv.title;
       if (authors) document.getElementById('f-creator').value = authors;
       if (genres) document.getElementById('f-genre').value = genres.split(',')[0].trim();
       if (year) document.getElementById('f-year').value = year.match(/\d{4}/)?.[0] || year;
       if (publisher) document.getElementById('f-publisher').value = publisher;
-      autoTagLanguage(langTag);
+      autoTagLanguage(langTag || (olConv.isChinese ? 'chinese' : null));
 
       previewArea.innerHTML = `<div class="fetch-preview">
         ${coverUrl ? `<img src="${coverUrl}" alt="cover">` : '<div style="width:50px;height:70px;background:var(--bg3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:24px">📚</div>'}
         <div class="fetch-preview-info">
-          <div class="fetch-preview-title">${escHtml(displayTitleOL)}</div>
+          <div class="fetch-preview-title">${escHtml(olConv.title)}</div>
           <div class="fetch-preview-sub">${escHtml(authors)}</div>
           ${year ? `<div class="fetch-preview-sub">${escHtml(year)}</div>` : ''}
           ${publisher ? `<div class="fetch-preview-sub" style="font-size:11px">${escHtml(publisher)}</div>` : ''}
@@ -1408,24 +1409,23 @@ async function lookupIsbn(isbn) {
       const cats = (vol.categories||[]).join(', ');
       const publisher = vol.publisher || '';
       const langTag = langCodeToTag(vol.language) || guessLangFromIsbn(isbn);
-      console.log('[SK] GB title:', title, 'vol.language:', vol.language, 'langTag:', langTag, 'hasCJK:', hasCJK(title));
+      console.log('[SK] GB isbn:', isbn, 'title:', title, 'vol.language:', vol.language, 'langTag:', langTag, 'hasCJK:', hasCJK(title));
 
       pendingCoverUrl = coverUrl;
       pendingIsbn = isbn;
 
-      const displayTitleGB = (langTag === 'chinese' && title && !hasCJK(title))
-        ? await convertPinyinTitle(title, isbn) : title;
-      if (displayTitleGB) document.getElementById('f-title').value = displayTitleGB;
+      const gbConv = (title && !hasCJK(title)) ? await convertPinyinTitle(title, isbn) : { title, isChinese: false };
+      if (gbConv.title) document.getElementById('f-title').value = gbConv.title;
       if (authors) document.getElementById('f-creator').value = authors;
       if (cats) document.getElementById('f-genre').value = cats.split('/')[0].trim();
       if (year) document.getElementById('f-year').value = year.substring(0,4);
       if (publisher) document.getElementById('f-publisher').value = publisher;
-      autoTagLanguage(langTag);
+      autoTagLanguage(langTag || (gbConv.isChinese ? 'chinese' : null));
 
       previewArea.innerHTML = `<div class="fetch-preview">
         ${coverUrl ? `<img src="${coverUrl}" alt="cover">` : '<div style="width:50px;height:70px;background:var(--bg3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:24px">📚</div>'}
         <div class="fetch-preview-info">
-          <div class="fetch-preview-title">${escHtml(displayTitleGB)}</div>
+          <div class="fetch-preview-title">${escHtml(gbConv.title)}</div>
           <div class="fetch-preview-sub">${escHtml(authors)}</div>
           ${year ? `<div class="fetch-preview-sub">${escHtml(year)}</div>` : ''}
           <div class="fetch-status">✓ Found via Google Books</div>
