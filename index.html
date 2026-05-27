@@ -1348,13 +1348,14 @@ async function convertPinyinTitle(pinyin, isbn, existingItems) {
       }
     } catch(_) {}
   }
-  // 3. Search OL by title text — no quota issues, may return CJK title
+  // 3. Google Input Tools pinyin IME — built for pinyin→CJK, no quota issues
   try {
-    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(pinyin)}&lang=chi&fields=title&limit=5`);
+    const pinyinLower = pinyin.toLowerCase().replace(/[^a-z\s]/g, ' ').trim();
+    const res = await fetch(`https://inputtools.google.com/request?itc=zh-t-i0-pinyin&num=3&ie=utf-8&text=${encodeURIComponent(pinyinLower)}`);
     const data = await res.json();
-    const titles = (data?.docs || []).map(d => d.title).filter(Boolean);
-    console.log('[SK] OL search titles:', titles);
-    const hit = titles.find(t => hasCJK(t));
+    const candidates = data?.[1]?.[0]?.[1] || [];
+    console.log('[SK] InputTools candidates:', candidates);
+    const hit = candidates.find(c => hasCJK(c));
     if (hit) return { title: `${hit} (${pinyin})`, isChinese: true };
   } catch(_) {}
   return { title: pinyin, isChinese: false };
