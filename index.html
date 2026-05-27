@@ -1327,24 +1327,25 @@ function hasCJK(text) {
 }
 
 // Returns { title, isChinese }
-// existingItems: GB volumeInfo items already fetched — avoids a second request
+// existingItems: GB volumeInfo items already fetched — avoids a second GB request
 async function convertPinyinTitle(pinyin, isbn, existingItems) {
-  // Search already-fetched items first (zero extra requests)
+  // 1. Search already-fetched GB items (zero extra requests)
   if (existingItems) {
     const hit = existingItems.find(i => hasCJK(i.volumeInfo?.title || ''));
     if (hit) return { title: `${hit.volumeInfo.title} (${pinyin})`, isChinese: true };
   }
-  // Fetch GB once (only when caller didn't already have items, e.g. OL path)
+  // 2. Try OL edition endpoint — different from jscmd=data, often has CJK title
   if (isbn) {
     try {
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+      const res = await fetch(`https://openlibrary.org/isbn/${isbn}.json`);
       const data = await res.json();
-      console.log('[SK] convertPinyinTitle GB fetch, items:', data?.items?.length);
-      const hit = data?.items?.find(i => hasCJK(i.volumeInfo?.title || ''));
-      if (hit) return { title: `${hit.volumeInfo.title} (${pinyin})`, isChinese: true };
+      console.log('[SK] OL edition title:', data?.title);
+      if (data?.title && hasCJK(data.title)) {
+        return { title: `${data.title} (${pinyin})`, isChinese: true };
+      }
     } catch(_) {}
   }
-  // Fallback: Google Translate with Chinese source hint
+  // 3. Google Translate fallback (sl=zh hints the source is Chinese)
   try {
     const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh&tl=zh-CN&dt=t&q=${encodeURIComponent(pinyin)}`);
     const data = await res.json();
