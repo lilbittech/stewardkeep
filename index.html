@@ -1290,6 +1290,15 @@ function lookupManual() {
   lookupIsbn(isbn);
 }
 
+function guessLangFromIsbn(isbn) {
+  const n = (isbn || '').replace(/[^0-9]/g, '');
+  if (n.startsWith('9787') || n.startsWith('978962') ||
+      n.startsWith('978957') || n.startsWith('978986') ||
+      n.startsWith('978626') || n.startsWith('978988') ||
+      (n.length === 10 && n.startsWith('7'))) return 'chinese';
+  return null;
+}
+
 function langCodeToTag(code) {
   const map = {
     en:'english', zh:'chinese', fr:'french', de:'german', es:'spanish',
@@ -1357,7 +1366,8 @@ async function lookupIsbn(isbn) {
       const genres = (book.subjects||[]).slice(0,3).map(s=>s.name||s).join(', ');
       const publisher = (book.publishers||[]).map(p=>p.name).join(', ');
       const langKey = (book.languages||[])[0]?.key?.split('/').pop();
-      const langTag = langCodeToTag(langKey);
+      const langTag = langCodeToTag(langKey) || guessLangFromIsbn(isbn);
+      console.log('[SK] OL title:', title, 'langKey:', langKey, 'langTag:', langTag, 'hasCJK:', hasCJK(title));
 
       pendingCoverUrl = coverUrl;
       pendingIsbn = isbn;
@@ -1397,7 +1407,8 @@ async function lookupIsbn(isbn) {
       const year = vol.publishedDate || '';
       const cats = (vol.categories||[]).join(', ');
       const publisher = vol.publisher || '';
-      const langTag = langCodeToTag(vol.language);
+      const langTag = langCodeToTag(vol.language) || guessLangFromIsbn(isbn);
+      console.log('[SK] GB title:', title, 'vol.language:', vol.language, 'langTag:', langTag, 'hasCJK:', hasCJK(title));
 
       pendingCoverUrl = coverUrl;
       pendingIsbn = isbn;
