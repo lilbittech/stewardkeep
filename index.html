@@ -1327,15 +1327,21 @@ function hasCJK(text) {
 }
 
 // Returns { title, isChinese }
-async function convertPinyinTitle(pinyin, isbn) {
-  // Primary: ask Google Books for Chinese-language edition — gets the real CJK title
+// existingItems: GB volumeInfo items already fetched — avoids a second request
+async function convertPinyinTitle(pinyin, isbn, existingItems) {
+  // Search already-fetched items first (zero extra requests)
+  if (existingItems) {
+    const hit = existingItems.find(i => hasCJK(i.volumeInfo?.title || ''));
+    if (hit) return { title: `${hit.volumeInfo.title} (${pinyin})`, isChinese: true };
+  }
+  // Fetch GB once (only when caller didn't already have items, e.g. OL path)
   if (isbn) {
     try {
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&langRestrict=zh`);
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
       const data = await res.json();
-      const chTitle = data?.items?.[0]?.volumeInfo?.title;
-      console.log('[SK] convertPinyinTitle GB zh result:', chTitle);
-      if (chTitle && hasCJK(chTitle)) return { title: `${chTitle} (${pinyin})`, isChinese: true };
+      console.log('[SK] convertPinyinTitle GB fetch, items:', data?.items?.length);
+      const hit = data?.items?.find(i => hasCJK(i.volumeInfo?.title || ''));
+      if (hit) return { title: `${hit.volumeInfo.title} (${pinyin})`, isChinese: true };
     } catch(_) {}
   }
   // Fallback: Google Translate with Chinese source hint
@@ -1414,7 +1420,7 @@ async function lookupIsbn(isbn) {
       pendingCoverUrl = coverUrl;
       pendingIsbn = isbn;
 
-      const gbConv = (title && !hasCJK(title)) ? await convertPinyinTitle(title, isbn) : { title, isChinese: false };
+      const gbConv = (title && !hasCJK(title)) ? await convertPinyinTitle(title, isbn, gbData.items) : { title, isChinese: false };
       if (gbConv.title) document.getElementById('f-title').value = gbConv.title;
       if (authors) document.getElementById('f-creator').value = authors;
       if (cats) document.getElementById('f-genre').value = cats.split('/')[0].trim();
