@@ -1345,12 +1345,13 @@ async function convertPinyinTitle(pinyin, isbn, existingItems) {
       }
     } catch(_) {}
   }
-  // 3. Google Translate fallback (sl=zh hints the source is Chinese)
+  // 3. Search GB by title text with Chinese restriction (title search, separate quota)
   try {
-    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh&tl=zh-CN&dt=t&q=${encodeURIComponent(pinyin)}`);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(pinyin)}&langRestrict=zh&maxResults=5`);
     const data = await res.json();
-    const chinese = data?.[0]?.map(seg => seg[0]).join('').trim();
-    if (chinese && hasCJK(chinese)) return { title: `${chinese} (${pinyin})`, isChinese: true };
+    console.log('[SK] GB title search items:', data?.items?.length, data?.items?.map(i => i.volumeInfo?.title));
+    const hit = data?.items?.find(i => hasCJK(i.volumeInfo?.title || ''));
+    if (hit) return { title: `${hit.volumeInfo.title} (${pinyin})`, isChinese: true };
   } catch(_) {}
   return { title: pinyin, isChinese: false };
 }
