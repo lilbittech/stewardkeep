@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+
+  <!-- background -->
+  <rect width="1024" height="1024" rx="224" fill="#0f0e0b"/>
+  <rect width="1024" height="1024" rx="224" fill="none" stroke="#3a3529" stroke-width="6"/>
+
+  <!-- book 3 (bottom) -->
+  <rect x="202" y="620" width="620" height="108" rx="14" fill="#3a3529"/>
+  <rect x="202" y="620" width="620" height="108" rx="14" fill="none" stroke="#4a4438" stroke-width="4"/>
+  <rect x="202" y="620" width="42"  height="108" rx="8"  fill="#c8922a" opacity="0.6"/>
+
+  <!-- book 2 (mid) -->
+  <rect x="256" y="508" width="512" height="108" rx="14" fill="#2a2520"/>
+  <rect x="256" y="508" width="512" height="108" rx="14" fill="none" stroke="#3a3529" stroke-width="4"/>
+  <rect x="256" y="508" width="42"  height="108" rx="8"  fill="#e0a83a" opacity="0.8"/>
+
+  <!-- book 1 (top) -->
+  <rect x="312" y="396" width="400" height="108" rx="14" fill="#1e1c17"/>
+  <rect x="312" y="396" width="400" height="108" rx="14" fill="none" stroke="#3a3529" stroke-width="4"/>
+  <rect x="312" y="396" width="42"  height="108" rx="8"  fill="#c8922a"/>
+
+  <!-- crown path -->
+  <path d="M340 348 L340 396 L426 348 L512 240 L598 348 L684 396 L684 348 Z"
+        fill="#c8922a" opacity="0.12"
+        stroke="#c8922a" stroke-width="8" stroke-linejoin="round"/>
+
+  <!-- crown dots -->
+  <circle cx="340" cy="348" r="20" fill="#c8922a"/>
+  <circle cx="512" cy="240" r="20" fill="#c8922a"/>
+  <circle cx="684" cy="348" r="20" fill="#c8922a"/>
+
+</svg>
